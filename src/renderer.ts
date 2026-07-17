@@ -55,9 +55,13 @@ async function renderPdf(filePath: string) {
 
   const data = await window.pdfscribbler.readPdf(filePath);
 
-const pdf = await pdfjsLib.getDocument({
-  data
-}).promise;
+  const pdf = await pdfjsLib.getDocument({
+    data,
+    useWasm: true,
+    wasmUrl: '/pdfjs/wasm/',
+    useWorkerFetch: true,
+    useImageDecoder: true
+  }).promise;
 
   const page = await pdf.getPage(1);
 
