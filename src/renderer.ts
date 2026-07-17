@@ -28,6 +28,19 @@
 
 import './index.css';
 
+const button = document.getElementById('openPdfButton') as HTMLButtonElement;
+const selectedFile = document.getElementById('selectedFile') as HTMLParagraphElement;
+
+button.addEventListener('click', async () => {
+  const file = await window.pdfscribbler.openPdf();
+
+  if (file) {
+    selectedFile.textContent = file;
+  } else {
+    selectedFile.textContent = 'No file selected.';
+  }
+});
+
 console.log(
   '👋 This message is being logged by "renderer.ts", included via Vite',
 );
