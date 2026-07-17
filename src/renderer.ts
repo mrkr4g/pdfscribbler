@@ -27,19 +27,54 @@
  */
 
 import './index.css';
+import * as pdfjsLib from 'pdfjs-dist';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 const button = document.getElementById('openPdfButton') as HTMLButtonElement;
 const selectedFile = document.getElementById('selectedFile') as HTMLParagraphElement;
+const canvas = document.getElementById('pdfCanvas') as HTMLCanvasElement;
+
+const context = canvas.getContext('2d');
 
 button.addEventListener('click', async () => {
   const file = await window.pdfscribbler.openPdf();
 
-  if (file) {
-    selectedFile.textContent = file;
-  } else {
+  if (!file) {
     selectedFile.textContent = 'No file selected.';
+    return;
   }
+
+  selectedFile.textContent = file;
+
+  await renderPdf(file);
 });
+
+async function renderPdf(filePath: string) {
+
+  const data = await window.pdfscribbler.readPdf(filePath);
+
+const pdf = await pdfjsLib.getDocument({
+  data
+}).promise;
+
+  const page = await pdf.getPage(1);
+
+  const viewport = page.getViewport({
+    scale: 1.5
+  });
+
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+
+  if (context) {
+    await page.render({
+      canvasContext: context,
+      viewport: viewport
+    }).promise;
+  }
+}
 
 console.log(
   '👋 This message is being logged by "renderer.ts", included via Vite',

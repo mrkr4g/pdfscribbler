@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
+import fs from 'node:fs/promises';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -46,6 +47,11 @@ ipcMain.handle('open-pdf', async () => {
   }
 
   return result.filePaths[0];
+});
+
+ipcMain.handle('read-pdf', async (_event, filePath: string) => {
+  const data = await fs.readFile(filePath);
+  return data;
 });
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
