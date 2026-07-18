@@ -22,6 +22,10 @@ body {
   border: 1px solid #888;
 }
 
+#thumbnailPanel canvas.selected {
+  border: 2px solid blue;
+}
+
 #mainViewer {
   flex: 1;
 }
