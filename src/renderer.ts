@@ -35,7 +35,7 @@ const button = document.getElementById('openPdfButton') as HTMLButtonElement;
 const selectedFile = document.getElementById('selectedFile') as HTMLParagraphElement;
 const canvas = document.getElementById('pdfCanvas') as HTMLCanvasElement;
 const thumbnailPanel = document.getElementById('thumbnailPanel') as HTMLDivElement;
-const context = canvas.getContext('2d');
+let currentPageNumber = 1;
 
 button.addEventListener('click', async () => {
   const file = await window.pdfscribbler.openPdf();
@@ -44,24 +44,26 @@ button.addEventListener('click', async () => {
     selectedFile.textContent = 'No file selected.';
     return;
   }
-
   selectedFile.textContent = file;
-
   await loadPdf(file);
-
   const thumbnails = await createThumbnails();
-  console.log("Thumbnail count:", thumbnails.length);
   thumbnailPanel.replaceChildren(...thumbnails);
 
-  await renderPdf(file);
+thumbnails.forEach((thumbnail) => {
+  thumbnail.addEventListener('click', async () => {
+    const pageNumber = Number(thumbnail.dataset.pageNumber);
+    currentPageNumber = pageNumber;
+    const page = await getPage(currentPageNumber);
+    await renderPage(page, canvas);
+  });
+});
+
+  await renderPdf();
 });
 
 async function renderPdf() {
-
-  const page = await getPage(1);
-
+  const page = await getPage(currentPageNumber);
   await renderPage(page, canvas);
-
 }
 
 console.log(
