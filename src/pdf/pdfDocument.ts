@@ -5,6 +5,10 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 let currentPdf: pdfjsLib.PDFDocumentProxy | null = null;
 
+export function hasDocument(): boolean {
+  return currentPdf !== null;
+}
+
 export async function loadPdf(filePath: string) {
     const data = await window.pdfscribbler.readPdf(filePath);
     currentPdf = await pdfjsLib.getDocument({
