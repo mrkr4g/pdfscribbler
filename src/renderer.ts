@@ -27,10 +27,8 @@
  */
 
 import './index.css';
-import * as pdfjsLib from 'pdfjs-dist';
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+import { loadPdf, getPage } from './pdf/pdfDocument';
+import { renderPage } from './pdf/pdfRenderer';
 
 const button = document.getElementById('openPdfButton') as HTMLButtonElement;
 const selectedFile = document.getElementById('selectedFile') as HTMLParagraphElement;
@@ -53,31 +51,12 @@ button.addEventListener('click', async () => {
 
 async function renderPdf(filePath: string) {
 
-  const data = await window.pdfscribbler.readPdf(filePath);
+  await loadPdf(filePath);
 
-  const pdf = await pdfjsLib.getDocument({
-    data,
-    useWasm: true,
-    wasmUrl: '/pdfjs/wasm/',
-    useWorkerFetch: true,
-    useImageDecoder: true
-  }).promise;
+  const page = await getPage(1);
 
-  const page = await pdf.getPage(1);
+  await renderPage(page, canvas);
 
-  const viewport = page.getViewport({
-    scale: 1.5
-  });
-
-  canvas.width = viewport.width;
-  canvas.height = viewport.height;
-
-  if (context) {
-    await page.render({
-      canvasContext: context,
-      viewport: viewport
-    }).promise;
-  }
 }
 
 console.log(
