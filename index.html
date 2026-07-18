@@ -13,7 +13,15 @@
     <button id="openPdfButton">Open PDF</button>
   
     <p id="selectedFile">No file selected.</p>
-    <canvas id="pdfCanvas" style="height: 90vh"></canvas>
+    <div id="pdfWorkspace">
+
+      <div id="thumbnailPanel"></div>
+    
+      <div id="mainViewer">
+        <canvas id="pdfCanvas"></canvas>
+      </div>
+    
+    </div>
 
     <script type="module" src="/src/renderer.ts"></script>
   </body>

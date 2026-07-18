@@ -29,11 +29,12 @@
 import './index.css';
 import { loadPdf, getPage } from './pdf/pdfDocument';
 import { renderPage } from './pdf/pdfRenderer';
+import { createThumbnails } from './pdf/pdfThumbnails';
 
 const button = document.getElementById('openPdfButton') as HTMLButtonElement;
 const selectedFile = document.getElementById('selectedFile') as HTMLParagraphElement;
 const canvas = document.getElementById('pdfCanvas') as HTMLCanvasElement;
-
+const thumbnailPanel = document.getElementById('thumbnailPanel') as HTMLDivElement;
 const context = canvas.getContext('2d');
 
 button.addEventListener('click', async () => {
@@ -46,12 +47,16 @@ button.addEventListener('click', async () => {
 
   selectedFile.textContent = file;
 
+  await loadPdf(file);
+
+  const thumbnails = await createThumbnails();
+  console.log("Thumbnail count:", thumbnails.length);
+  thumbnailPanel.replaceChildren(...thumbnails);
+
   await renderPdf(file);
 });
 
-async function renderPdf(filePath: string) {
-
-  await loadPdf(filePath);
+async function renderPdf() {
 
   const page = await getPage(1);
 
