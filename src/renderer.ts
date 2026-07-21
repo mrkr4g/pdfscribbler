@@ -67,9 +67,14 @@ const restoredStamps: StampImage[] = [];
 let currentPageNumber = 1;
 let placedStamp: PlacedStamp | null = null;
 let selectedThumbnail: HTMLCanvasElement | null = null;
-type FitMode = 'width' | 'height';
 let fitMode: FitMode = 'width';
+let isDraggingStamp = false;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
 
+type FitMode = 'width' | 'height';
+
+//button click event listener
 button.addEventListener('click', async () => {
   const file = await window.pdfscribbler.openPdf();
 
@@ -139,7 +144,8 @@ async function renderPdf() {
   await renderPage(page, canvas, scale);
   stampCanvas.width = canvas.width;
   stampCanvas.height = canvas.height;
-//add any stamps that are placed
+
+//add any stamps that are placed to the page rendering
 renderPlacedStamp();
 }
 
@@ -184,11 +190,37 @@ function renderPlacedStamp(): void {
   );
 }
 
-//Add click-to-place behavior
+//pointer down event listener
 stampCanvas.addEventListener(
-  'click',
+  'pointerdown',
   event => {
     if (!hasDocument()) {
+      return;
+    }
+
+    const point =
+      getStampCanvasPoint(event);
+
+    if (
+      isPointInsidePlacedStamp(
+        point.x,
+        point.y
+      )
+    ) {
+      isDraggingStamp = true;
+
+      dragOffsetX =
+        point.x - placedStamp!.x;
+
+      dragOffsetY =
+        point.y - placedStamp!.y;
+
+      stampCanvas.setPointerCapture(
+        event.pointerId
+      );
+
+      stampCanvas.style.cursor = 'grabbing';
+
       return;
     }
 
@@ -198,23 +230,6 @@ stampCanvas.addEventListener(
     if (!selectedStamp) {
       return;
     }
-
-    const bounds =
-      stampCanvas.getBoundingClientRect();
-
-    const canvasScaleX =
-      stampCanvas.width / bounds.width;
-
-    const canvasScaleY =
-      stampCanvas.height / bounds.height;
-
-    const clickedX =
-      (event.clientX - bounds.left) *
-      canvasScaleX;
-
-    const clickedY =
-      (event.clientY - bounds.top) *
-      canvasScaleY;
 
     const defaultWidth =
       stampCanvas.width * 0.2;
@@ -230,8 +245,8 @@ stampCanvas.addEventListener(
       stampImageId: selectedStamp.id,
       pageNumber: currentPageNumber,
 
-      x: clickedX - defaultWidth / 2,
-      y: clickedY - defaultHeight / 2,
+      x: point.x - defaultWidth / 2,
+      y: point.y - defaultHeight / 2,
 
       width: defaultWidth,
       height: defaultHeight,
@@ -240,6 +255,121 @@ stampCanvas.addEventListener(
     renderPlacedStamp();
   }
 );
+
+//pointer move event listener
+stampCanvas.addEventListener(
+  'pointermove',
+  event => {
+    const point =
+      getStampCanvasPoint(event);
+
+    if (
+      !isDraggingStamp ||
+      !placedStamp
+    ) {
+      stampCanvas.style.cursor =
+        isPointInsidePlacedStamp(
+          point.x,
+          point.y
+        )
+          ? 'grab'
+          : 'crosshair';
+
+      return;
+    }
+
+    const proposedX =
+  point.x - dragOffsetX;
+
+const proposedY =
+  point.y - dragOffsetY;
+
+const maximumX =
+  stampCanvas.width -
+  placedStamp.width;
+
+const maximumY =
+  stampCanvas.height -
+  placedStamp.height;
+
+placedStamp.x = Math.min(
+  Math.max(proposedX, 0),
+  maximumX
+);
+
+placedStamp.y = Math.min(
+  Math.max(proposedY, 0),
+  maximumY
+);
+
+    renderPlacedStamp();
+  }
+);
+
+//pointer up event listener
+stampCanvas.addEventListener(
+  'pointerup',
+  event => {
+    if (!isDraggingStamp) {
+      return;
+    }
+
+    isDraggingStamp = false;
+
+    stampCanvas.releasePointerCapture(
+      event.pointerId
+    );
+
+    stampCanvas.style.cursor = 'grab';
+  }
+);
+
+//coordinate helper for dragging stamp image
+function getStampCanvasPoint(
+  event: PointerEvent
+): {
+  x: number;
+  y: number;
+} {
+  const bounds =
+    stampCanvas.getBoundingClientRect();
+
+  const canvasScaleX =
+    stampCanvas.width / bounds.width;
+
+  const canvasScaleY =
+    stampCanvas.height / bounds.height;
+
+  return {
+    x:
+      (event.clientX - bounds.left) *
+      canvasScaleX,
+
+    y:
+      (event.clientY - bounds.top) *
+      canvasScaleY,
+  };
+}
+
+//This checks whether a point lies inside the stamp’s rectangular boundary.
+function isPointInsidePlacedStamp(
+  x: number,
+  y: number
+): boolean {
+  if (
+    !placedStamp ||
+    placedStamp.pageNumber !== currentPageNumber
+  ) {
+    return false;
+  }
+
+  return (
+    x >= placedStamp.x &&
+    x <= placedStamp.x + placedStamp.width &&
+    y >= placedStamp.y &&
+    y <= placedStamp.y + placedStamp.height
+  );
+}
 
 //handler for button to add a new stamp
 addStampButton.addEventListener(
