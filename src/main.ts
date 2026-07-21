@@ -2,6 +2,27 @@ import { app, BrowserWindow, dialog, ipcMain } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import fs from 'node:fs/promises';
+import { importStampFile } from './pdf/stampFileManager';
+
+//getimagemimetype helper
+function getImageMimeType(filePath: string): string {
+  const extension = path.extname(filePath).toLowerCase();
+
+  switch (extension) {
+    case '.png':
+      return 'image/png';
+
+    case '.jpg':
+    case '.jpeg':
+      return 'image/jpeg';
+
+    case '.webp':
+      return 'image/webp';
+
+    default:
+      return 'application/octet-stream';
+  }
+}
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -53,6 +74,42 @@ ipcMain.handle('read-pdf', async (_event, filePath: string) => {
   const data = await fs.readFile(filePath);
   return data;
 });
+
+//stamp image handler provided by chatgpt
+ipcMain.handle('open-stamp-image', async () => {
+  const result = await dialog.showOpenDialog({
+    properties: ['openFile'],
+    filters: [
+      {
+        name: 'Images',
+        extensions: ['png', 'jpg', 'jpeg', 'webp'],
+      },
+    ],
+  });
+
+  if (result.canceled || result.filePaths.length === 0) {
+    return null;
+  }
+
+  const sourceFilePath = result.filePaths[0];
+
+  return await importStampFile(sourceFilePath);
+});
+
+ipcMain.handle(
+  'read-stamp-image',
+  async (_event, filePath: string) => {
+    const data = await fs.readFile(filePath);
+
+    return {
+      data,
+      name: path.basename(filePath),
+      mimeType: getImageMimeType(filePath),
+    };
+  }
+);
+
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.

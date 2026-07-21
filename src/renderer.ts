@@ -31,6 +31,23 @@ import { loadPdf, getPage } from './pdf/pdfDocument';
 import { renderPage } from './pdf/pdfRenderer';
 import { createThumbnails } from './pdf/pdfThumbnails';
 import { hasDocument } from './pdf/pdfDocument';
+import { loadStampImage } from './pdf/stampImageLoader';
+import {
+  addStampImage,
+  getSelectedStampImage,
+  getSelectedStampImageId,
+  getStampImages,
+  replaceStampImages,
+  restoreSelectedStampImageId,
+  selectStampImage,
+} from './pdf/stampLibrary';
+import {
+  loadSelectedStampId,
+  loadStampLibrary,
+  saveSelectedStampId,
+  saveStampLibrary,
+} from './pdf/stampStorage';
+import type { StampImage } from './pdf/pdfTypes';
 
 const button = document.getElementById('openPdfButton') as HTMLButtonElement;
 const selectedFile = document.getElementById('selectedFile') as HTMLParagraphElement;
@@ -39,6 +56,10 @@ const thumbnailPanel = document.getElementById('thumbnailPanel') as HTMLDivEleme
 const fitWidthButton = document.getElementById('fitWidthButton') as HTMLButtonElement;
 const fitHeightButton = document.getElementById('fitHeightButton') as HTMLButtonElement;
 const mainViewer = document.getElementById('mainViewer') as HTMLDivElement;
+const addStampButton = document.getElementById('addStampButton') as HTMLButtonElement;
+const stampThumbnailRow = document.getElementById('stampThumbnailRow') as HTMLDivElement;
+const restoredStamps: StampImage[] = [];
+
 let currentPageNumber = 1;
 let selectedThumbnail: HTMLCanvasElement | null = null;
 type FitMode = 'width' | 'height';
@@ -112,8 +133,94 @@ async function renderPdf() {
   await renderPage(page, canvas, scale);
 }
 
-let resizeTimer: ReturnType<typeof setTimeout> | undefined;
+//handler for button to add a new stamp
+addStampButton.addEventListener(
+  'click',
+  async () => {
+    try {
+      const importedFile =
+        await window.pdfscribbler.openStampImage();
 
+      if (!importedFile) {
+        return;
+      }
+
+      const stampImage =
+    await loadStampImage(
+    importedFile.filePath,
+    importedFile.name
+  ); 
+
+      addStampImage(stampImage);
+      saveCurrentStampState();
+      renderStampThumbnails();
+      } catch (error) {
+      console.error(
+        'Could not add the stamp image:',
+        error
+      );
+    }
+  }
+);
+
+//render thumbnails of the stamps
+function renderStampThumbnails(): void {
+  stampThumbnailRow.replaceChildren();
+
+  const stampImages = getStampImages();
+  const selectedStamp = getSelectedStampImage();
+
+  for (const stampImage of stampImages) {
+    const thumbnail =
+      document.createElement('button');
+
+    thumbnail.type = 'button';
+    thumbnail.classList.add('stamp-thumbnail');
+    thumbnail.title = stampImage.name;
+
+    if (stampImage.id === selectedStamp?.id) {
+      thumbnail.classList.add('selected');
+    }
+
+    const image =
+      document.createElement('img');
+
+    image.src = stampImage.image.src;
+    image.alt = stampImage.name;
+
+    thumbnail.appendChild(image);
+
+    thumbnail.addEventListener(
+      'click',
+      () => {
+        selectStampImage(stampImage.id);
+        saveCurrentStampState();
+        renderStampThumbnails();
+        }
+    );
+
+    stampThumbnailRow.appendChild(thumbnail);
+  }
+}
+
+//Add a helper that converts loaded stamps to saved data
+function saveCurrentStampState(): void {
+  const savedStamps = getStampImages().map(
+    stamp => ({
+      id: stamp.id,
+      name: stamp.name,
+      filePath: stamp.filePath,
+    })
+  );
+
+  saveStampLibrary(savedStamps);
+  saveSelectedStampId(
+    getSelectedStampImageId()
+  );
+}
+
+//resize large view if window is resized
+let resizeTimer: ReturnType<typeof setTimeout> | undefined;
 window.addEventListener('resize', () => {
   window.clearTimeout(resizeTimer);
 
@@ -121,6 +228,41 @@ window.addEventListener('resize', () => {
     void renderPdf();
   }, 150);
 });
+
+//Restore the saved library at startup
+async function restoreStampLibrary(): Promise<void> {
+  const savedStamps = loadStampLibrary();
+  const restoredStamps = [];
+
+  for (const savedStamp of savedStamps) {
+    try {
+      const loadedStamp =
+        await loadStampImage(savedStamp.filePath);
+
+      restoredStamps.push({
+        ...loadedStamp,
+        id: savedStamp.id,
+        name: savedStamp.name,
+      });
+    } catch (error) {
+      console.error(
+        `Could not restore stamp: ${savedStamp.filePath}`,
+        error
+      );
+    }
+  }
+
+  replaceStampImages(restoredStamps);
+
+  restoreSelectedStampImageId(
+    loadSelectedStampId()
+  );
+
+  saveCurrentStampState();
+  renderStampThumbnails();
+}
+
+void restoreStampLibrary();
 
 console.log(
   '👋 This message is being logged by "renderer.ts", included via Vite',

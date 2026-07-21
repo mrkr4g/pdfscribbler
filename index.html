@@ -6,15 +6,20 @@
 
   </head>
   <body>
-    <h1>PDF Scribbler</h1>
-  
-    <p>Select a PDF to begin.</p>
-  
+    <p id="selectedFile">No file selected.</p>
     <button id="openPdfButton">Open PDF</button>
     <button id="fitWidthButton" disabled>Fit Width</button>
     <button id="fitHeightButton" disabled>Fit Height</button>
-  
-    <p id="selectedFile">No file selected.</p>
+    <div id="stampChooser">
+      
+     
+      <div id="stampThumbnailRow"></div>
+    <button id="addStampButton">
+        New Stamp
+      </button>
+     
+    </div>
+    <hr>
     <div id="pdfWorkspace">
 
       <div id="thumbnailPanel"></div>
