@@ -46,9 +46,20 @@ button:disabled {
   text-align: center;
 }
 
-#pdfCanvas {
+#pageCanvasContainer {
+  position: relative;
   display: inline-block;
+}
+
+#pdfCanvas {
+  display: block;
   max-width: none;
+}
+
+#stampCanvas {
+  position: absolute;
+  inset: 0;
+  cursor: crosshair;
 }
 
 #stampChooser {

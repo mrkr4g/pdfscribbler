@@ -47,11 +47,15 @@ import {
   saveSelectedStampId,
   saveStampLibrary,
 } from './pdf/stampStorage';
-import type { StampImage } from './pdf/pdfTypes';
+import type { 
+  PlacedStamp,
+  StampImage
+} from './pdf/pdfTypes';
 
 const button = document.getElementById('openPdfButton') as HTMLButtonElement;
 const selectedFile = document.getElementById('selectedFile') as HTMLParagraphElement;
 const canvas = document.getElementById('pdfCanvas') as HTMLCanvasElement;
+const stampCanvas = document.getElementById('stampCanvas') as HTMLCanvasElement;
 const thumbnailPanel = document.getElementById('thumbnailPanel') as HTMLDivElement;
 const fitWidthButton = document.getElementById('fitWidthButton') as HTMLButtonElement;
 const fitHeightButton = document.getElementById('fitHeightButton') as HTMLButtonElement;
@@ -61,6 +65,7 @@ const stampThumbnailRow = document.getElementById('stampThumbnailRow') as HTMLDi
 const restoredStamps: StampImage[] = [];
 
 let currentPageNumber = 1;
+let placedStamp: PlacedStamp | null = null;
 let selectedThumbnail: HTMLCanvasElement | null = null;
 type FitMode = 'width' | 'height';
 let fitMode: FitMode = 'width';
@@ -109,6 +114,7 @@ fitHeightButton.addEventListener('click', async () => {
   await renderPdf();
 });
 
+//render the selected pdf page
 async function renderPdf() {
   if (!hasDocument()) {
     return;
@@ -131,7 +137,109 @@ async function renderPdf() {
   // finished laying out yet.
   scale = Math.max(scale, 0.1);
   await renderPage(page, canvas, scale);
+  stampCanvas.width = canvas.width;
+  stampCanvas.height = canvas.height;
+//add any stamps that are placed
+renderPlacedStamp();
 }
+
+//This clears the transparent overlay and redraws the placed stamp.
+function renderPlacedStamp(): void {
+  const context = stampCanvas.getContext('2d');
+
+  if (!context) {
+    throw new Error(
+      'Could not get stamp canvas context.'
+    );
+  }
+
+  context.clearRect(
+    0,
+    0,
+    stampCanvas.width,
+    stampCanvas.height
+  );
+
+  if (
+    !placedStamp ||
+    placedStamp.pageNumber !== currentPageNumber
+  ) {
+    return;
+  }
+
+  const stampImage = getStampImages().find(
+    stamp => stamp.id === placedStamp?.stampImageId
+  );
+
+  if (!stampImage) {
+    return;
+  }
+
+  context.drawImage(
+    stampImage.image,
+    placedStamp.x,
+    placedStamp.y,
+    placedStamp.width,
+    placedStamp.height
+  );
+}
+
+//Add click-to-place behavior
+stampCanvas.addEventListener(
+  'click',
+  event => {
+    if (!hasDocument()) {
+      return;
+    }
+
+    const selectedStamp =
+      getSelectedStampImage();
+
+    if (!selectedStamp) {
+      return;
+    }
+
+    const bounds =
+      stampCanvas.getBoundingClientRect();
+
+    const canvasScaleX =
+      stampCanvas.width / bounds.width;
+
+    const canvasScaleY =
+      stampCanvas.height / bounds.height;
+
+    const clickedX =
+      (event.clientX - bounds.left) *
+      canvasScaleX;
+
+    const clickedY =
+      (event.clientY - bounds.top) *
+      canvasScaleY;
+
+    const defaultWidth =
+      stampCanvas.width * 0.2;
+
+    const aspectRatio =
+      selectedStamp.image.naturalHeight /
+      selectedStamp.image.naturalWidth;
+
+    const defaultHeight =
+      defaultWidth * aspectRatio;
+
+    placedStamp = {
+      stampImageId: selectedStamp.id,
+      pageNumber: currentPageNumber,
+
+      x: clickedX - defaultWidth / 2,
+      y: clickedY - defaultHeight / 2,
+
+      width: defaultWidth,
+      height: defaultHeight,
+    };
+
+    renderPlacedStamp();
+  }
+);
 
 //handler for button to add a new stamp
 addStampButton.addEventListener(
