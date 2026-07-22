@@ -69,8 +69,19 @@ let placedStamp: PlacedStamp | null = null;
 let selectedThumbnail: HTMLCanvasElement | null = null;
 let fitMode: FitMode = 'width';
 let isDraggingStamp = false;
+let isPlacedStampSelected = false;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
+//dd a visible selection border and one working resize handle in the lower-right corner
+let isResizingStamp = false;
+let resizeStartX = 0;
+let resizeStartY = 0;
+let resizeStartWidth = 0;
+let resizeStartHeight = 0;
+//We only need to store the starting pointer position and starting stamp dimensions.
+
+const resizeHandleSize = 12;
+const minimumStampWidth = 30;
 
 type FitMode = 'width' | 'height';
 
@@ -188,6 +199,55 @@ function renderPlacedStamp(): void {
     placedStamp.width,
     placedStamp.height
   );
+
+  if (!isPlacedStampSelected) {
+    return;
+  }
+
+  context.save();
+
+context.strokeStyle = 'blue';
+context.lineWidth = 2;
+context.setLineDash([6, 4]);
+
+context.strokeRect(
+  placedStamp.x,
+  placedStamp.y,
+  placedStamp.width,
+  placedStamp.height
+);
+
+context.setLineDash([]);
+
+context.fillStyle = 'white';
+context.strokeStyle = 'blue';
+context.lineWidth = 2;
+
+const handleX =
+  placedStamp.x +
+  placedStamp.width -
+  resizeHandleSize / 2;
+
+const handleY =
+  placedStamp.y +
+  placedStamp.height -
+  resizeHandleSize / 2;
+
+context.fillRect(
+  handleX,
+  handleY,
+  resizeHandleSize,
+  resizeHandleSize
+);
+
+context.strokeRect(
+  handleX,
+  handleY,
+  resizeHandleSize,
+  resizeHandleSize
+);
+
+context.restore();
 }
 
 //pointer down event listener
@@ -200,36 +260,90 @@ stampCanvas.addEventListener(
 
     const point =
       getStampCanvasPoint(event);
+    
+      if (
+        placedStamp &&
+        isPointInsideResizeHandle(
+          point.x,
+          point.y
+        )
+      ) {
+        isResizingStamp = true;
+      
+        resizeStartX = point.x;
+        resizeStartY = point.y;
+      
+        resizeStartWidth =
+          placedStamp.width;
+      
+        resizeStartHeight =
+          placedStamp.height;
+      
+        stampCanvas.setPointerCapture(
+          event.pointerId
+        );
+      
+        stampCanvas.style.cursor =
+          'nwse-resize';
+      
+        return;
+      }
+//is the pointer inside an already placed stamp?
+      if (
+        isPointInsidePlacedStamp(
+          point.x,
+          point.y
+        )
+      ) {
+        if (!isPlacedStampSelected) {
+          isPlacedStampSelected = true;
+          renderPlacedStamp();
+      
+          stampCanvas.style.cursor = 'grab';
+          return;
+        }
+      
+        isDraggingStamp = true;
+      
+        dragOffsetX =
+          point.x - placedStamp!.x;
+      
+        dragOffsetY =
+          point.y - placedStamp!.y;
+      
+        stampCanvas.setPointerCapture(
+          event.pointerId
+        );
+      
+        stampCanvas.style.cursor =
+          'grabbing';
+      
+        return;
+      }
 
-    if (
-      isPointInsidePlacedStamp(
-        point.x,
-        point.y
-      )
-    ) {
-      isDraggingStamp = true;
+//Deselect when clicking empty page space
+if (placedStamp) {
+  isPlacedStampSelected = false;
 
-      dragOffsetX =
-        point.x - placedStamp!.x;
+  isDraggingStamp = false;
+  isResizingStamp = false;
 
-      dragOffsetY =
-        point.y - placedStamp!.y;
+  renderPlacedStamp();
 
-      stampCanvas.setPointerCapture(
-        event.pointerId
-      );
+  stampCanvas.style.cursor =
+    'crosshair';
 
-      stampCanvas.style.cursor = 'grabbing';
+  return;
+}
 
-      return;
-    }
-
+//obtain the currently selected stamp
     const selectedStamp =
       getSelectedStampImage();
 
     if (!selectedStamp) {
       return;
     }
+//
 
     const defaultWidth =
       stampCanvas.width * 0.2;
@@ -251,6 +365,7 @@ stampCanvas.addEventListener(
       width: defaultWidth,
       height: defaultHeight,
     };
+    isPlacedStampSelected = true;
 
     renderPlacedStamp();
   }
@@ -263,17 +378,83 @@ stampCanvas.addEventListener(
     const point =
       getStampCanvasPoint(event);
 
+      if (
+        isResizingStamp &&
+        placedStamp
+      ) {
+        const horizontalChange =
+          point.x - resizeStartX;
+      
+        const proposedWidth =
+          resizeStartWidth +
+          horizontalChange;
+      
+        const aspectRatio =
+          resizeStartHeight /
+          resizeStartWidth;
+      
+        const maximumWidth =
+          stampCanvas.width -
+          placedStamp.x;
+      
+        placedStamp.width = Math.min(
+          Math.max(
+            proposedWidth,
+            minimumStampWidth
+          ),
+          maximumWidth
+        );
+      
+        placedStamp.height =
+          placedStamp.width *
+          aspectRatio;
+      
+        const maximumHeight =
+          stampCanvas.height -
+          placedStamp.y;
+      
+        if (
+          placedStamp.height >
+          maximumHeight
+        ) {
+          placedStamp.height =
+            maximumHeight;
+      
+          placedStamp.width =
+            placedStamp.height /
+            aspectRatio;
+        }
+      
+        renderPlacedStamp();
+        return;
+      }
+
     if (
       !isDraggingStamp ||
       !placedStamp
     ) {
-      stampCanvas.style.cursor =
+      if (
+        isPointInsideResizeHandle(
+          point.x,
+          point.y
+        )
+      ) {
+        stampCanvas.style.cursor =
+          'nwse-resize';
+      } else if (
         isPointInsidePlacedStamp(
           point.x,
           point.y
         )
-          ? 'grab'
-          : 'crosshair';
+      ) {
+        stampCanvas.style.cursor =
+  isPlacedStampSelected
+    ? 'grab'
+    : 'pointer';
+      } else {
+        stampCanvas.style.cursor =
+          'crosshair';
+      }
 
       return;
     }
@@ -310,19 +491,54 @@ placedStamp.y = Math.min(
 stampCanvas.addEventListener(
   'pointerup',
   event => {
-    if (!isDraggingStamp) {
+    if (
+      !isDraggingStamp &&
+      !isResizingStamp
+    ) {
       return;
     }
 
     isDraggingStamp = false;
+    isResizingStamp = false;
 
-    stampCanvas.releasePointerCapture(
-      event.pointerId
-    );
+    if (
+      stampCanvas.hasPointerCapture(
+        event.pointerId
+      )
+    ) {
+      stampCanvas.releasePointerCapture(
+        event.pointerId
+      );
+    }
 
-    stampCanvas.style.cursor = 'grab';
+    const point =
+      getStampCanvasPoint(event);
+
+    if (
+      isPointInsideResizeHandle(
+        point.x,
+        point.y
+      )
+    ) {
+      stampCanvas.style.cursor =
+        'nwse-resize';
+    } else if (
+      isPointInsidePlacedStamp(
+        point.x,
+        point.y
+      )
+    ) {
+      stampCanvas.style.cursor =
+        isPlacedStampSelected
+        ? 'grab'
+        : 'pointer';
+    } else {
+      stampCanvas.style.cursor =
+        'crosshair';
+    }
   }
 );
+//Using hasPointerCapture() avoids an error if capture was already lost or released.
 
 //coordinate helper for dragging stamp image
 function getStampCanvasPoint(
@@ -370,6 +586,35 @@ function isPointInsidePlacedStamp(
     y <= placedStamp.y + placedStamp.height
   );
 }
+//this is a resize-handle hit test
+function isPointInsideResizeHandle(
+  x: number,
+  y: number
+): boolean {
+  if (
+    !placedStamp ||
+    placedStamp.pageNumber !== currentPageNumber
+  ) {
+    return false;
+  }
+
+  const handleCenterX =
+    placedStamp.x + placedStamp.width;
+
+  const handleCenterY =
+    placedStamp.y + placedStamp.height;
+
+  const halfHandle =
+    resizeHandleSize / 2;
+
+  return (
+    x >= handleCenterX - halfHandle &&
+    x <= handleCenterX + halfHandle &&
+    y >= handleCenterY - halfHandle &&
+    y <= handleCenterY + halfHandle
+  );
+}
+//This check must eventually happen before the general stamp hit test because the handle partly overlaps the stamp itself.
 
 //handler for button to add a new stamp
 addStampButton.addEventListener(
