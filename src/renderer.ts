@@ -135,6 +135,8 @@ async function renderPdf() {
   if (!hasDocument()) {
     return;
   }
+  const previousCanvasWidth = stampCanvas.width;
+  const previousCanvasHeight = stampCanvas.height;
   const page = await getPage(currentPageNumber);
   const unscaledViewport = page.getViewport({ scale: 1 });
   const horizontalPadding = 20;
@@ -155,6 +157,27 @@ async function renderPdf() {
   await renderPage(page, canvas, scale);
   stampCanvas.width = canvas.width;
   stampCanvas.height = canvas.height;
+  //stamp viewport scaling section
+if (
+  placedStamp &&
+  placedStamp.pageNumber === currentPageNumber &&
+  previousCanvasWidth > 0 &&
+  previousCanvasHeight > 0
+) {
+  const horizontalScale =
+    stampCanvas.width /
+    previousCanvasWidth;
+
+  const verticalScale =
+    stampCanvas.height /
+    previousCanvasHeight;
+
+  placedStamp.x *= horizontalScale;
+  placedStamp.y *= verticalScale;
+
+  placedStamp.width *= horizontalScale;
+  placedStamp.height *= verticalScale;
+}
 
 //add any stamps that are placed to the page rendering
 renderPlacedStamp();
@@ -539,6 +562,31 @@ stampCanvas.addEventListener(
   }
 );
 //Using hasPointerCapture() avoids an error if capture was already lost or released.
+
+//Delete selected stamp
+window.addEventListener(
+  'keydown',
+  event => {
+    if (
+      event.key !== 'Delete' ||
+      !placedStamp ||
+      !isPlacedStampSelected
+    ) {
+      return;
+    }
+
+    placedStamp = null;
+    isPlacedStampSelected = false;
+    isDraggingStamp = false;
+    isResizingStamp = false;
+
+    stampCanvas.style.cursor =
+      'crosshair';
+
+    renderPlacedStamp();
+  }
+);
+
 
 //coordinate helper for dragging stamp image
 function getStampCanvasPoint(
