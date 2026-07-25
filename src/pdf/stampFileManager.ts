@@ -1,5 +1,5 @@
 import { app } from 'electron';
-import { copyFile, mkdir } from 'node:fs/promises';
+import { copyFile, mkdir, unlink } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 
@@ -58,4 +58,44 @@ export async function importStampFile(
     filePath: managedFilePath,
     name: originalName,
   };
+}
+
+export async function deleteStampFile(
+  filePath: string
+): Promise<void> {
+  const stampDirectory =
+    path.resolve(
+      getStampDirectory()
+    );
+
+  const resolvedFilePath =
+    path.resolve(filePath);
+
+  const relativePath =
+    path.relative(
+      stampDirectory,
+      resolvedFilePath
+    );
+
+  if (
+    relativePath.startsWith('..') ||
+    path.isAbsolute(relativePath)
+  ) {
+    throw new Error(
+      'Refusing to delete a file outside the managed stamp directory.'
+    );
+  }
+
+  try {
+    await unlink(
+      resolvedFilePath
+    );
+  } catch (error) {
+    const fileError =
+      error as NodeJS.ErrnoException;
+
+    if (fileError.code !== 'ENOENT') {
+      throw error;
+    }
+  }
 }

@@ -1,10 +1,4 @@
-import type {
-  SavedStampImage,
-  StampImage,
-} from './pdfTypes';
-
-const STAMP_LIBRARY_KEY = 'pdfscribbler.stampLibrary';
-const SELECTED_STAMP_KEY = 'pdfscribbler.selectedStampId';
+import type {StampImage} from './pdfTypes';
 
 let stampImages: StampImage[] = [];
 let selectedStampImageId: string | null = null;
@@ -20,15 +14,49 @@ export function addStampImage(stampImage: StampImage): void {
 
   if (existingStamp) {
     selectedStampImageId = existingStamp.id;
-    saveStampLibrary();
     return;
   }
 
   stampImages.push(stampImage);
   selectedStampImageId = stampImage.id;
 
-  saveStampLibrary();
 }
+
+
+export function removeStampImage(
+  id: string
+): StampImage | null {
+  const stampIndex =
+    stampImages.findIndex(
+      stampImage =>
+        stampImage.id === id
+    );
+
+  if (stampIndex === -1) {
+    return null;
+  }
+
+  const [removedStamp] =
+    stampImages.splice(
+      stampIndex,
+      1
+    );
+
+  if (
+    selectedStampImageId === id
+  ) {
+    const nextStamp =
+      stampImages[stampIndex] ??
+      stampImages[stampIndex - 1] ??
+      null;
+
+    selectedStampImageId =
+      nextStamp?.id ?? null;
+  }
+
+  return removedStamp;
+}
+
 
 export function getSelectedStampImage(): StampImage | null {
   if (!selectedStampImageId) {
@@ -52,70 +80,12 @@ export function selectStampImage(id: string): void {
   }
 
   selectedStampImageId = id;
-  localStorage.setItem(SELECTED_STAMP_KEY, id);
 }
 
 export function hasSelectedStampImage(): boolean {
   return getSelectedStampImage() !== null;
 }
 
-export function getSavedStampImages(): SavedStampImage[] {
-  const savedLibrary = localStorage.getItem(STAMP_LIBRARY_KEY);
-
-  if (!savedLibrary) {
-    return [];
-  }
-
-  try {
-    return JSON.parse(savedLibrary) as SavedStampImage[];
-  } catch {
-    return [];
-  }
-}
-
-export function restoreStampImages(
-  restoredStampImages: StampImage[]
-): void {
-  stampImages = restoredStampImages;
-
-  const savedSelectedId =
-    localStorage.getItem(SELECTED_STAMP_KEY);
-
-  const selectedStampStillExists = stampImages.some(
-    stamp => stamp.id === savedSelectedId
-  );
-
-  if (selectedStampStillExists) {
-    selectedStampImageId = savedSelectedId;
-  } else {
-    selectedStampImageId = stampImages[0]?.id ?? null;
-  }
-
-  saveStampLibrary();
-}
-
-function saveStampLibrary(): void {
-  const savedStampImages: SavedStampImage[] =
-    stampImages.map(stamp => ({
-      id: stamp.id,
-      name: stamp.name,
-      filePath: stamp.filePath,
-    }));
-
-  localStorage.setItem(
-    STAMP_LIBRARY_KEY,
-    JSON.stringify(savedStampImages)
-  );
-
-  if (selectedStampImageId) {
-    localStorage.setItem(
-      SELECTED_STAMP_KEY,
-      selectedStampImageId
-    );
-  } else {
-    localStorage.removeItem(SELECTED_STAMP_KEY);
-  }
-}
 
 //remember last used stamp through a restart
 export function getSelectedStampImageId(): string | null {

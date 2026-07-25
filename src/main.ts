@@ -1,8 +1,8 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import fs from 'node:fs/promises';
-import { importStampFile } from './pdf/stampFileManager';
+import { deleteStampFile, importStampFile } from './pdf/stampFileManager';
 
 //getimagemimetype helper
 function getImageMimeType(filePath: string): string {
@@ -51,7 +51,7 @@ const createWindow = () => {
   // Open the DevTools.
   mainWindow.webContents.openDevTools();
 };
-// file open dialog written for me by chatgpt
+//open-pdf handler
 ipcMain.handle('open-pdf', async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openFile'],
@@ -70,6 +70,53 @@ ipcMain.handle('open-pdf', async () => {
   return result.filePaths[0];
 });
 
+//save-pdf handler
+ipcMain.handle(
+  'save-pdf',
+  async (
+    _event,
+    pdfBytes: Uint8Array,
+    sourceFilePath: string,
+    pageNumber: number
+  ) => {
+    const sourcePath =
+      path.parse(sourceFilePath);
+
+    const defaultFilePath =
+      path.join(
+        sourcePath.dir,
+        `${sourcePath.name}-page-${pageNumber}-stamped.pdf`
+      );
+
+    const result =
+      await dialog.showSaveDialog({
+        title: 'Save stamped PDF page',
+        defaultPath: defaultFilePath,
+        filters: [
+          {
+            name: 'PDF Files',
+            extensions: ['pdf'],
+          },
+        ],
+      });
+
+    if (
+      result.canceled ||
+      !result.filePath
+    ) {
+      return null;
+    }
+
+    await fs.writeFile(
+      result.filePath,
+      pdfBytes
+    );
+
+    return result.filePath;
+  }
+);
+
+//read-pdf handler
 ipcMain.handle('read-pdf', async (_event, filePath: string) => {
   const data = await fs.readFile(filePath);
   return data;
@@ -108,7 +155,37 @@ ipcMain.handle(
     };
   }
 );
+ipcMain.handle(
+  'delete-stamp-image',
+  async (
+    _event,
+    filePath: string
+  ) => {
+    await deleteStampFile(
+      filePath
+    );
+  }
+);
 
+// Open a saved file using its default application.
+ipcMain.handle(
+  'open-local-file',
+  async (
+    _event,
+    filePath: string
+  ) => {
+    const errorMessage =
+      await shell.openPath(
+        filePath
+      );
+
+    if (errorMessage) {
+      throw new Error(
+        errorMessage
+      );
+    }
+  }
+);
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.

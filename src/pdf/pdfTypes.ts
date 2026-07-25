@@ -11,6 +11,7 @@ export interface Thumbnail {
   }
   
   export interface PlacedStamp {
+    id: string;
     stampImageId: string;
     pageNumber: number;
   
