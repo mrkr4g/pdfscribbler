@@ -6,6 +6,12 @@ declare global {
       openPdf: () =>
         Promise<string | null>;
 
+      onOpenPdfFromWindows: (
+        callback: (
+          filePath: string
+        ) => void
+      ) => void;
+
       readPdf: (
         filePath: string
       ) => Promise<Uint8Array>;

@@ -122,12 +122,14 @@ const minimumStampWidthRatio = 0.01;
 
 type FitMode = 'width' | 'height';
 
+//new version of open pdf button listener
 //button click event listener for opening pdf button
 button.addEventListener(
   'click',
   async () => {
     const file =
-      await window.pdfscribbler.openPdf();
+      await window.pdfscribbler
+        .openPdf();
 
     if (!file) {
       selectedFile.textContent =
@@ -136,114 +138,154 @@ button.addEventListener(
       return;
     }
 
-    loadingIndicator.hidden = false;
-
-    button.disabled = true;
-    fitWidthButton.disabled = true;
-    fitHeightButton.disabled = true;
-    savePageButton.disabled = true;
-    saveAndCloseButton.disabled = true;
-
-    selectedFile.textContent =
-      `Loading: ${file}`;
-
-      let saveStage =
-      'reading the source PDF';
-
-    try {
-      await loadPdf(file);
-
-      currentPdfFilePath = file;
-
-      savedPdfFilePath = null;
-      saveStatus.textContent = '';
-      saveStatus.removeAttribute('title');
-
-      // Clear stamps belonging to the previous document.
-      placedStamps.length = 0;
-      detachedStampImages.clear();
-      placedStamp = null;
-
-      isPlacedStampSelected = false;
-      isDraggingStamp = false;
-      isResizingStamp = false;
-
-      stampCanvas.style.cursor =
-        'crosshair';
-
-      currentPageNumber = 1;
-      fitMode = 'width';
-
-      const thumbnails =
-        await createThumbnails();
-
-      thumbnailPanel.replaceChildren(
-        ...thumbnails
-      );
-
-      thumbnails[0].classList.add(
-        'selected'
-      );
-
-      selectedThumbnail =
-        thumbnails[0];
-
-      thumbnails.forEach(
-        thumbnail => {
-          thumbnail.addEventListener(
-            'click',
-            async () => {
-              const pageNumber =
-                Number(
-                  thumbnail.dataset
-                    .pageNumber
-                );
-
-              currentPageNumber =
-                pageNumber;
-
-              if (selectedThumbnail) {
-                selectedThumbnail.classList
-                  .remove('selected');
-              }
-
-              thumbnail.classList.add(
-                'selected'
-              );
-
-              selectedThumbnail =
-                thumbnail;
-
-              await renderPdf();
-            }
-          );
-        }
-      );
-
-      await renderPdf();
-
-      selectedFile.textContent = file;
-
-      fitWidthButton.disabled = false;
-      fitHeightButton.disabled = false;
-      savePageButton.disabled = false;
-      saveAndCloseButton.disabled = false;
-    } catch (error) {
-      console.error(
-        'Could not load the selected PDF:',
-        error
-      );
-
-      currentPdfFilePath = null;
-
-      selectedFile.textContent =
-        'The PDF could not be loaded.';
-    } finally {
-      loadingIndicator.hidden = true;
-      button.disabled = false;
-    }
+    await openPdfFile(
+      file
+    );
   }
 );
+
+//Listen for a PDF opened through Windows.
+window.pdfscribbler
+  .onOpenPdfFromWindows(
+    filePath => {
+      void openPdfFile(
+        filePath
+      );
+    }
+  );
+
+//Load a PDF regardless of whether it came from
+//the Open PDF button or from Windows.
+async function openPdfFile(
+  filePath: string
+): Promise<void> {
+  loadingIndicator.hidden =
+    false;
+
+  button.disabled = true;
+  fitWidthButton.disabled =
+    true;
+  fitHeightButton.disabled =
+    true;
+  savePageButton.disabled =
+    true;
+  saveAndCloseButton.disabled =
+    true;
+
+  selectedFile.textContent =
+    `Loading: ${filePath}`;
+
+  try {
+    await loadPdf(
+      filePath
+    );
+
+    currentPdfFilePath =
+      filePath;
+
+    savedPdfFilePath = null;
+    saveStatus.textContent = '';
+    saveStatus.removeAttribute(
+      'title'
+    );
+
+    // Clear stamps belonging to the previous document.
+    placedStamps.length = 0;
+    detachedStampImages.clear();
+    placedStamp = null;
+
+    isPlacedStampSelected =
+      false;
+    isDraggingStamp = false;
+    isResizingStamp = false;
+
+    stampCanvas.style.cursor =
+      'crosshair';
+
+    currentPageNumber = 1;
+    fitMode = 'width';
+
+    const thumbnails =
+      await createThumbnails();
+
+    thumbnailPanel.replaceChildren(
+      ...thumbnails
+    );
+
+    thumbnails[0].classList.add(
+      'selected'
+    );
+
+    selectedThumbnail =
+      thumbnails[0];
+
+    thumbnails.forEach(
+      thumbnail => {
+        thumbnail.addEventListener(
+          'click',
+          async () => {
+            const pageNumber =
+              Number(
+                thumbnail.dataset
+                  .pageNumber
+              );
+
+            currentPageNumber =
+              pageNumber;
+
+            if (selectedThumbnail) {
+              selectedThumbnail
+                .classList.remove(
+                  'selected'
+                );
+            }
+
+            thumbnail.classList.add(
+              'selected'
+            );
+
+            selectedThumbnail =
+              thumbnail;
+
+            await renderPdf();
+          }
+        );
+      }
+    );
+
+    await renderPdf();
+
+    selectedFile.textContent =
+      filePath;
+
+    fitWidthButton.disabled =
+      false;
+    fitHeightButton.disabled =
+      false;
+    savePageButton.disabled =
+      false;
+    saveAndCloseButton.disabled =
+      false;
+  } catch (error) {
+    console.error(
+      'Could not load the selected PDF:',
+      error
+    );
+
+    currentPdfFilePath =
+      null;
+
+    selectedFile.textContent =
+      'The PDF could not be loaded.';
+  } finally {
+    loadingIndicator.hidden =
+      true;
+
+    button.disabled =
+      false;
+  }
+}
+//close of new version of open pdf button listener
 
 //buttons to fit page to width and height of viewport
 fitWidthButton.addEventListener('click', async () => {

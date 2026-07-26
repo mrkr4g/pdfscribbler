@@ -29,46 +29,219 @@ if (started) {
   app.quit();
 }
 
+// Keep a reference to the PDFScribbler window so that
+// Windows can send PDF files to it.
+let mainWindow: BrowserWindow | null = null;
+
+// Store a PDF path temporarily if the application window
+// has not finished loading yet.
+let pendingPdfFilePath: string | null =
+  getPdfFilePath(process.argv);
+
+// Find the first .pdf file path in a command-line argument list.
+function getPdfFilePath(
+  commandLine: string[]
+): string | null {
+  const pdfArgument =
+    commandLine.find(
+      argument =>
+        path.extname(
+          argument
+        ).toLowerCase() === '.pdf'
+    );
+
+  if (!pdfArgument) {
+    return null;
+  }
+
+  return path.resolve(
+    pdfArgument
+  );
+}
+
+// Bring the existing PDFScribbler window to the front.
+function focusMainWindow(): void {
+  if (!mainWindow) {
+    return;
+  }
+
+  if (mainWindow.isMinimized()) {
+    mainWindow.restore();
+  }
+
+  mainWindow.show();
+  mainWindow.focus();
+}
+
+// Send a PDF path to renderer.ts after the window is ready.
+function sendPdfToRenderer(
+  filePath: string
+): void {
+  if (
+    !mainWindow ||
+    mainWindow.webContents.isLoading()
+  ) {
+    pendingPdfFilePath =
+      filePath;
+
+    return;
+  }
+
+  mainWindow.webContents.send(
+    'open-pdf-from-windows',
+    filePath
+  );
+
+  focusMainWindow();
+}
+
+// Keep PDFScribbler as a single running application.
+// A second launch sends its PDF path to the first instance.
+const gotSingleInstanceLock =
+  app.requestSingleInstanceLock();
+
+if (!gotSingleInstanceLock) {
+  app.quit();
+} else {
+  app.on(
+    'second-instance',
+    (
+      _event,
+      commandLine
+    ) => {
+      const pdfFilePath =
+        getPdfFilePath(
+          commandLine
+        );
+
+      if (pdfFilePath) {
+        sendPdfToRenderer(
+          pdfFilePath
+        );
+      } else {
+        focusMainWindow();
+      }
+    }
+  );
+}
+
 const createWindow = () => {
   // Create the browser window.
-  const mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-    },
-  });
+  const window =
+    new BrowserWindow({
+      width: 800,
+      height: 600,
+      webPreferences: {
+        preload: path.join(
+          __dirname,
+          'preload.js'
+        ),
+      },
+    });
 
-  // and load the index.html of the app.
-  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-    mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
+  // Save the window reference for file-opening events.
+  mainWindow = window;
+
+  // Send a startup PDF path after the renderer has loaded.
+  window.webContents.on(
+    'did-finish-load',
+    () => {
+      if (!pendingPdfFilePath) {
+        return;
+      }
+
+      const filePath =
+        pendingPdfFilePath;
+
+      pendingPdfFilePath =
+        null;
+
+      window.webContents.send(
+        'open-pdf-from-windows',
+        filePath
+      );
+    }
+  );
+
+  // Clear the saved reference when the window closes.
+  window.on(
+    'closed',
+    () => {
+      if (mainWindow === window) {
+        mainWindow = null;
+      }
+    }
+  );
+
+  // Load the app through Vite during development
+  // or from the packaged renderer files.
+  if (
+    MAIN_WINDOW_VITE_DEV_SERVER_URL
+  ) {
+    window.loadURL(
+      MAIN_WINDOW_VITE_DEV_SERVER_URL
+    );
   } else {
-    mainWindow.loadFile(
-      path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
+    window.loadFile(
+      path.join(
+        __dirname,
+        `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`
+      )
     );
   }
 
   // Open the DevTools.
-  mainWindow.webContents.openDevTools();
+  window.webContents.openDevTools();
 };
+
+// Prevent more than one Open PDF dialog from being displayed at once.
+let isOpenPdfDialogVisible = false;
+
 //open-pdf handler
-ipcMain.handle('open-pdf', async () => {
-  const result = await dialog.showOpenDialog({
-    properties: ['openFile'],
-    filters: [
-      {
-        name: 'PDF Files',
-        extensions: ['pdf']
+ipcMain.handle(
+  'open-pdf',
+  async () => {
+    if (
+      !mainWindow ||
+      isOpenPdfDialogVisible
+    ) {
+      return null;
+    }
+
+    isOpenPdfDialogVisible = true;
+
+    try {
+      const result =
+        await dialog.showOpenDialog(
+          mainWindow,
+          {
+            properties: [
+              'openFile'
+            ],
+            filters: [
+              {
+                name: 'PDF Files',
+                extensions: [
+                  'pdf'
+                ],
+              },
+            ],
+          }
+        );
+
+      if (
+        result.canceled ||
+        result.filePaths.length === 0
+      ) {
+        return null;
       }
-    ]
-  });
 
-  if (result.canceled) {
-    return null;
+      return result.filePaths[0];
+    } finally {
+      isOpenPdfDialogVisible = false;
+    }
   }
-
-  return result.filePaths[0];
-});
+);
 
 //save-pdf handler
 ipcMain.handle(

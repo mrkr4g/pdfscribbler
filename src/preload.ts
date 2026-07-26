@@ -2,6 +2,24 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('pdfscribbler', {
     openPdf: () => ipcRenderer.invoke('open-pdf'),
+
+    onOpenPdfFromWindows: (
+      callback: (
+        filePath: string
+      ) => void
+    ): void => {
+      ipcRenderer.on(
+        'open-pdf-from-windows',
+        (
+          _event,
+          filePath: string
+        ) => {
+          callback(
+            filePath
+          );
+        }
+      );
+    },
   
     readPdf: (filePath: string) =>
       ipcRenderer.invoke('read-pdf', filePath),
