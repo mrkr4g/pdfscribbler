@@ -17,6 +17,21 @@ contextBridge.exposeInMainWorld('pdfscribbler', {
         sourceFilePath,
         pageNumber
       ),
+    
+    savePdfDirect: (
+      pdfBytes: Uint8Array,
+      sourceFilePath: string,
+      pageNumber: number
+    ): Promise<string> =>
+      ipcRenderer.invoke(
+        'save-pdf-direct',
+        pdfBytes,
+        sourceFilePath,
+        pageNumber
+      ),
+    
+    closeApp: (): void =>
+      ipcRenderer.send('close-app'),
 
       openLocalFile: (
         filePath: string

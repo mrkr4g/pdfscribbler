@@ -29,6 +29,14 @@ declare global {
         originalFilePath: string,
         pageNumber: number
       ) => Promise<string | null>;
+      
+      savePdfDirect: (
+        outputPdfBytes: Uint8Array,
+        originalFilePath: string,
+        pageNumber: number
+      ) => Promise<string>;
+      
+      closeApp: () => void;
 
       deleteStampImage: (
         filePath: string

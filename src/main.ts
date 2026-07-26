@@ -109,10 +109,45 @@ ipcMain.handle(
 
     await fs.writeFile(
       result.filePath,
-      pdfBytes
+      Buffer.from(pdfBytes)
     );
 
     return result.filePath;
+  }
+);
+
+//save-pdf-direct handler
+ipcMain.handle(
+  'save-pdf-direct',
+  async (
+    _event,
+    pdfBytes: Uint8Array,
+    sourceFilePath: string,
+    pageNumber: number
+  ) => {
+    const sourcePath =
+      path.parse(sourceFilePath);
+
+    const outputFilePath =
+      path.join(
+        sourcePath.dir,
+        `${sourcePath.name}-page-${pageNumber}-stamped.pdf`
+      );
+
+    await fs.writeFile(
+      outputFilePath,
+      Buffer.from(pdfBytes)
+    );
+
+    return outputFilePath;
+  }
+);
+
+//close app handler
+ipcMain.on(
+  'close-app',
+  () => {
+    app.quit();
   }
 );
 

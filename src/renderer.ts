@@ -68,6 +68,10 @@ const removeStampButton = document.getElementById('removeStampButton') as HTMLBu
 const stampThumbnailRow = document.getElementById('stampThumbnailRow') as HTMLDivElement;
 const restoredStamps: StampImage[] = [];
 const savePageButton = document.getElementById('savePageButton') as HTMLButtonElement;
+const saveAndCloseButton =
+  document.getElementById(
+    'saveAndCloseButton'
+  ) as HTMLButtonElement;
 const saveStatus = document.getElementById('saveStatus') as HTMLAnchorElement;
 
 let currentPageNumber = 1;
@@ -138,9 +142,13 @@ button.addEventListener(
     fitWidthButton.disabled = true;
     fitHeightButton.disabled = true;
     savePageButton.disabled = true;
+    saveAndCloseButton.disabled = true;
 
     selectedFile.textContent =
       `Loading: ${file}`;
+
+      let saveStage =
+      'reading the source PDF';
 
     try {
       await loadPdf(file);
@@ -219,6 +227,7 @@ button.addEventListener(
       fitWidthButton.disabled = false;
       fitHeightButton.disabled = false;
       savePageButton.disabled = false;
+      saveAndCloseButton.disabled = false;
     } catch (error) {
       console.error(
         'Could not load the selected PDF:',
@@ -247,93 +256,160 @@ fitHeightButton.addEventListener('click', async () => {
   await renderPdf();
 });
 
-//save pdf button
+//save pdf buttons
 savePageButton.addEventListener(
   'click',
-  async () => {
-    if (
-      !currentPdfFilePath ||
-      !hasDocument()
-    ) {
+  () => {
+    void saveActivePage(false);
+  }
+);
+
+saveAndCloseButton.addEventListener(
+  'click',
+  () => {
+    void saveActivePage(true);
+  }
+);
+
+async function saveActivePage(
+  closeAfterSave: boolean
+): Promise<void> {
+  if (
+    !currentPdfFilePath ||
+    !hasDocument()
+  ) {
+    return;
+  }
+
+  const sourceFilePath =
+    currentPdfFilePath;
+
+  const activeButton =
+    closeAfterSave
+      ? saveAndCloseButton
+      : savePageButton;
+
+  const originalButtonText =
+    activeButton.textContent ??
+    (
+      closeAfterSave
+        ? 'Save and Close'
+        : 'Save Active Page'
+    );
+
+  savePageButton.disabled = true;
+  saveAndCloseButton.disabled = true;
+
+  activeButton.textContent =
+    'Preparing PDF...';
+
+  saveStatus.textContent = '';
+
+  let saveStage =
+    'reading the source PDF';
+  
+  try {
+    const sourcePdfData =
+      await window.pdfscribbler.readPdf(
+        sourceFilePath
+      );
+
+    const sourcePdfBytes =
+      new Uint8Array(
+        sourcePdfData
+      );
+
+    saveStage =
+    'exporting the active page';
+
+    const outputPdfBytes =
+      await exportActivePage(
+        sourcePdfBytes,
+        currentPageNumber,
+        placedStamps,
+        getRenderableStampImages(),
+        stampCanvas.width,
+        stampCanvas.height
+      );
+
+    activeButton.textContent =
+      closeAfterSave
+        ? 'Saving...'
+        : 'Choose Save Location...';
+
+    saveStage =
+    closeAfterSave
+      ? 'writing the PDF directly'
+      : 'opening the Save As dialog';
+
+    const savedFilePath =
+    closeAfterSave
+      ? await window.pdfscribbler
+          .savePdfDirect(
+            outputPdfBytes,
+            sourceFilePath,
+            currentPageNumber
+          )
+      : await window.pdfscribbler
+          .savePdf(
+            outputPdfBytes,
+            sourceFilePath,
+            currentPageNumber
+          );
+
+    if (!savedFilePath) {
+      savedPdfFilePath = null;
+
+      saveStatus.textContent =
+        'Save canceled.';
+
+      saveStatus.removeAttribute(
+        'title'
+      );
+
       return;
     }
 
-    const originalButtonText =
-      savePageButton.textContent ??
-      'Save Active Page';
+    if (closeAfterSave) {
+      window.pdfscribbler.closeApp();
+      return;
+    }
 
-    savePageButton.disabled = true;
-    savePageButton.textContent =
-      'Preparing PDF...';
+    savedPdfFilePath =
+      savedFilePath;
 
-    saveStatus.textContent = '';
+    saveStatus.textContent =
+      `Saved: ${savedFilePath}`;
 
-    try {
-      const sourcePdfData =
-        await window.pdfscribbler.readPdf(
-          currentPdfFilePath
-        );
-
-      const sourcePdfBytes =
-        new Uint8Array(
-          sourcePdfData
-        );
-
-      const outputPdfBytes =
-        await exportActivePage(
-          sourcePdfBytes,
-          currentPageNumber,
-          placedStamps,
-          getRenderableStampImages(),
-          stampCanvas.width,
-          stampCanvas.height
-        );
-
-      savePageButton.textContent =
-        'Choose Save Location...';
-
-      const savedFilePath =
-        await window.pdfscribbler.savePdf(
-          outputPdfBytes,
-          currentPdfFilePath,
-          currentPageNumber
-        );
-
-        if (savedFilePath) {
-          savedPdfFilePath =
-            savedFilePath;
-        
-          saveStatus.textContent =
-            `Saved: ${savedFilePath}`;
-        
-          saveStatus.title =
-            'Open the saved PDF';
-        } else {
-          savedPdfFilePath = null;
-        
-          saveStatus.textContent =
-            'Save canceled.';
-        
-          saveStatus.removeAttribute(
-            'title'
-          );
-        }
+    saveStatus.title =
+      'Open the saved PDF';
     } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : String(error);
+    
       console.error(
-        'Could not save the active PDF page:',
+        `Could not save while ${saveStage}:`,
         error
       );
+    
       savedPdfFilePath = null;
-      saveStatus.removeAttribute('title');
+    
+      saveStatus.removeAttribute(
+        'title'
+      );
+    
       saveStatus.textContent =
-        'The PDF could not be saved.';
+        `Save failed while ${saveStage}: ${errorMessage}`;
     } finally {
-      savePageButton.disabled = false;
-      savePageButton.textContent =
-        originalButtonText;
-    }
+    savePageButton.disabled = false;
+    saveAndCloseButton.disabled = false;
+
+    activeButton.textContent =
+      originalButtonText;
   }
-);
+};
 
 //render the selected pdf page
 async function renderPdf() {
