@@ -27,6 +27,10 @@
       <div id="thumbnailPanel"></div>
     
       <div id="mainViewer">
+        <div id="loadingIndicator" role="status" aria-live="polite" hidden>
+          <div class="loadingSpinner" aria-hidden="true"></div>
+            <span>Loading PDF...</span>
+        </div>
         <div id="pageCanvasContainer">
 
         <canvas id="pdfCanvas"></canvas>
