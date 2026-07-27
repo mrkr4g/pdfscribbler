@@ -1,6 +1,8 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
 import path from 'node:path';
-import started from 'electron-squirrel-startup';
+import {
+  handleSquirrelStartupEvents
+} from './squirrelStartup';
 import fs from 'node:fs/promises';
 import { deleteStampFile, importStampFile } from './pdf/stampFileManager';
 
@@ -24,8 +26,8 @@ function getImageMimeType(filePath: string): string {
   }
 }
 
-// Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (started) {
+// Handle Windows installation, update, and uninstall events.
+if (handleSquirrelStartupEvents()) {
   app.quit();
 }
 
@@ -190,8 +192,14 @@ const createWindow = () => {
     );
   }
 
-  // Open the DevTools.
+// Open DevTools only while running through the
+// Vite development server with npm start.
+if (
+  MAIN_WINDOW_VITE_DEV_SERVER_URL
+) {
   window.webContents.openDevTools();
+}
+
 };
 
 // Prevent more than one Open PDF dialog from being displayed at once.

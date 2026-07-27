@@ -3,6 +3,19 @@ import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
+// Locate PDF.js decoder files relative to the renderer page.
+//
+// During development, window.location.href points to the Vite
+// development server.
+//
+// In an installed build, it points to the packaged index.html file.
+// Resolving the folder this way works in both environments.
+const wasmUrl =
+  new URL(
+    'pdfjs/wasm/',
+    window.location.href
+  ).toString();
+
 let currentPdf: pdfjsLib.PDFDocumentProxy | null = null;
 
 export function hasDocument(): boolean {
@@ -14,8 +27,8 @@ export async function loadPdf(filePath: string) {
     currentPdf = await pdfjsLib.getDocument({
       data,
       useWasm: true,
-      wasmUrl: '/pdfjs/wasm/',
-      useWorkerFetch: true,
+      wasmUrl,
+      useWorkerFetch: false,
       useImageDecoder: true,
     }).promise;
   
