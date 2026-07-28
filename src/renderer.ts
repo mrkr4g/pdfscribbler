@@ -41,6 +41,7 @@ import {
   replaceStampImages,
   restoreSelectedStampImageId,
   selectStampImage,
+  setStampPreferredWidthRatio,
 } from './pdf/stampLibrary';
 import {
   haveDefaultStampsBeenSeeded,
@@ -738,8 +739,13 @@ if (
       return;
     }
 
-    const defaultWidth =
-      stampCanvas.width * 0.15;
+    const defaultWidthRatio =
+  selectedStamp.preferredWidthRatio ??
+  0.15;
+
+const defaultWidth =
+  stampCanvas.width *
+  defaultWidthRatio;
 
     const aspectRatio =
       selectedStamp.image.naturalHeight /
@@ -901,6 +907,9 @@ stampCanvas.addEventListener(
       return;
     }
 
+    const finishedResizing =
+    isResizingStamp;
+
     isDraggingStamp = false;
     isResizingStamp = false;
 
@@ -914,6 +923,29 @@ stampCanvas.addEventListener(
       );
     }
 
+    if (
+      finishedResizing &&
+      placedStamp &&
+      stampCanvas.width > 0
+    ) {
+      const preferredWidthRatio =
+        Math.min(
+          Math.max(
+            placedStamp.width /
+              stampCanvas.width,
+            minimumStampWidthRatio
+          ),
+          1
+        );
+    
+      setStampPreferredWidthRatio(
+        placedStamp.stampImageId,
+        preferredWidthRatio
+      );
+    
+      saveCurrentStampState();
+    }
+    
     const point =
       getStampCanvasPoint(event);
 
@@ -1206,6 +1238,8 @@ function saveCurrentStampState(): void {
       id: stamp.id,
       name: stamp.name,
       filePath: stamp.filePath,
+      preferredWidthRatio:
+        stamp.preferredWidthRatio,
     })
   );
 
@@ -1240,11 +1274,13 @@ async function restoreStampLibrary(): Promise<void> {
           savedStamp.filePath
         );
 
-      restoredStamps.push({
-        ...loadedStamp,
-        id: savedStamp.id,
-        name: savedStamp.name,
-      });
+        restoredStamps.push({
+          ...loadedStamp,
+          id: savedStamp.id,
+          name: savedStamp.name,
+          preferredWidthRatio:
+            savedStamp.preferredWidthRatio,
+        });
     } catch (error) {
       console.error(
         `Could not restore stamp: ${savedStamp.filePath}`,

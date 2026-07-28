@@ -82,6 +82,22 @@ export function selectStampImage(id: string): void {
   selectedStampImageId = id;
 }
 
+export function setStampPreferredWidthRatio(
+  id: string,
+  preferredWidthRatio: number
+): void {
+  const stampImage = stampImages.find(
+    stamp => stamp.id === id
+  );
+
+  if (!stampImage) {
+    return;
+  }
+
+  stampImage.preferredWidthRatio =
+    preferredWidthRatio;
+}
+
 export function hasSelectedStampImage(): boolean {
   return getSelectedStampImage() !== null;
 }

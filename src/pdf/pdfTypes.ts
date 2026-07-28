@@ -8,6 +8,14 @@ export interface Thumbnail {
     name: string;
     filePath: string;
     image: HTMLImageElement;
+    preferredWidthRatio?: number;
+  }
+
+  export interface SavedStampImage {
+    id: string;
+    name: string;
+    filePath: string;
+    preferredWidthRatio?: number;
   }
   
   export interface PlacedStamp {
