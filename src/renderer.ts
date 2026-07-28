@@ -27,10 +27,9 @@
  */
 
 import './index.css';
-import { loadPdf, getPage } from './pdf/pdfDocument';
+import { loadPdf, getPage, hasDocument } from './pdf/pdfDocument';
 import { renderPage } from './pdf/pdfRenderer';
 import { createThumbnails } from './pdf/pdfThumbnails';
-import { hasDocument } from './pdf/pdfDocument';
 import { loadStampImage } from './pdf/stampImageLoader';
 import { exportActivePage } from './pdf/pdfExporter';
 import {
@@ -44,8 +43,10 @@ import {
   selectStampImage,
 } from './pdf/stampLibrary';
 import {
+  haveDefaultStampsBeenSeeded,
   loadSelectedStampId,
   loadStampLibrary,
+  markDefaultStampsSeeded,
   saveSelectedStampId,
   saveStampLibrary,
 } from './pdf/stampStorage';
@@ -451,7 +452,7 @@ async function saveActivePage(
     activeButton.textContent =
       originalButtonText;
   }
-};
+}
 
 //render the selected pdf page
 async function renderPdf() {
@@ -1224,15 +1225,20 @@ window.addEventListener('resize', () => {
   }, 150);
 });
 
-//Restore the saved library at startup
+// Restore the saved library and install the packaged
+// default stamps once.
 async function restoreStampLibrary(): Promise<void> {
-  const savedStamps = loadStampLibrary();
-  const restoredStamps = [];
+  const savedStamps =
+    loadStampLibrary();
+
+  const restoredStamps: StampImage[] = [];
 
   for (const savedStamp of savedStamps) {
     try {
       const loadedStamp =
-        await loadStampImage(savedStamp.filePath);
+        await loadStampImage(
+          savedStamp.filePath
+        );
 
       restoredStamps.push({
         ...loadedStamp,
@@ -1247,7 +1253,41 @@ async function restoreStampLibrary(): Promise<void> {
     }
   }
 
-  replaceStampImages(restoredStamps);
+  replaceStampImages(
+    restoredStamps
+  );
+
+  if (
+    !haveDefaultStampsBeenSeeded()
+  ) {
+    try {
+      const defaultStampFiles =
+        await window.pdfscribbler
+          .installDefaultStamps();
+
+      for (
+        const defaultStampFile of
+          defaultStampFiles
+      ) {
+        const defaultStampImage =
+          await loadStampImage(
+            defaultStampFile.filePath,
+            defaultStampFile.name
+          );
+
+        addStampImage(
+          defaultStampImage
+        );
+      }
+
+      markDefaultStampsSeeded();
+    } catch (error) {
+      console.error(
+        'Could not install default stamps:',
+        error
+      );
+    }
+  }
 
   restoreSelectedStampImageId(
     loadSelectedStampId()

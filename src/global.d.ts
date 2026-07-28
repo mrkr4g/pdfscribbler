@@ -22,6 +22,14 @@ declare global {
           name: string;
         } | null>;
 
+      installDefaultStamps: () =>
+        Promise<
+          Array<{
+            filePath: string;
+            name: string;
+          }>
+        >;
+
       readStampImage: (
         filePath: string
       ) => Promise<{

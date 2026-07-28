@@ -2,6 +2,8 @@ import type { SavedStampImage } from './pdfTypes';
 
 const STAMP_LIBRARY_KEY = 'pdfscribbler.stampLibrary';
 const SELECTED_STAMP_KEY = 'pdfscribbler.selectedStampId';
+const DEFAULT_STAMPS_SEEDED_KEY =
+  'pdfscribbler.defaultStampsSeeded';
 
 export function saveStampLibrary(
   stamps: SavedStampImage[]
@@ -49,5 +51,20 @@ export function saveSelectedStampId(
 export function loadSelectedStampId(): string | null {
   return localStorage.getItem(
     SELECTED_STAMP_KEY
+  );
+}
+
+export function haveDefaultStampsBeenSeeded(): boolean {
+  return (
+    localStorage.getItem(
+      DEFAULT_STAMPS_SEEDED_KEY
+    ) === 'true'
+  );
+}
+
+export function markDefaultStampsSeeded(): void {
+  localStorage.setItem(
+    DEFAULT_STAMPS_SEEDED_KEY,
+    'true'
   );
 }

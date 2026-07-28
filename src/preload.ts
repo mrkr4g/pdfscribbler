@@ -64,6 +64,16 @@ contextBridge.exposeInMainWorld('pdfscribbler', {
       name: string;
     } | null> =>
       ipcRenderer.invoke('open-stamp-image'),
+
+    installDefaultStamps: (): Promise<
+    Array<{
+      filePath: string;
+      name: string;
+    }>
+  > =>
+    ipcRenderer.invoke(
+      'install-default-stamps'
+    ),
   
     readStampImage: (filePath: string) =>
       ipcRenderer.invoke('read-stamp-image', filePath),

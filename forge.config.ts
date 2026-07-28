@@ -11,6 +11,9 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     icon: './assets/icons/pdfscribbler',
+    extraResource: [
+      './assets/default-stamps',
+    ],
   },
   rebuildConfig: {},
   makers: [

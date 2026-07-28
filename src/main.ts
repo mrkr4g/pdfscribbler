@@ -4,7 +4,44 @@ import {
   handleSquirrelStartupEvents
 } from './squirrelStartup';
 import fs from 'node:fs/promises';
-import { deleteStampFile, importStampFile } from './pdf/stampFileManager';
+import {
+  deleteStampFile,
+  getStampDirectory,
+  importStampFile,
+} from './pdf/stampFileManager';
+
+//add default stamps and package them with the installer
+interface DefaultStampDefinition {
+  fileName: string;
+  displayName: string;
+}
+
+const DEFAULT_STAMP_DEFINITIONS: DefaultStampDefinition[] = [
+  {
+    fileName: 'approved.jpg',
+    displayName: 'Approved',
+  },
+  {
+    fileName: 'received.png',
+    displayName: 'Received',
+  },
+];
+
+// Locate the bundled images in both development and packaged builds.
+function getBundledDefaultStampDirectory(): string {
+  if (app.isPackaged) {
+    return path.join(
+      process.resourcesPath,
+      'default-stamps'
+    );
+  }
+
+  return path.join(
+    app.getAppPath(),
+    'assets',
+    'default-stamps'
+  );
+}
 
 //getimagemimetype helper
 function getImageMimeType(filePath: string): string {
@@ -338,7 +375,60 @@ ipcMain.handle('read-pdf', async (_event, filePath: string) => {
   return data;
 });
 
-//stamp image handler provided by chatgpt
+// Copy the packaged default stamps into the managed stamp directory.
+ipcMain.handle(
+  'install-default-stamps',
+  async () => {
+    const bundledStampDirectory =
+      getBundledDefaultStampDirectory();
+
+    const managedStampDirectory =
+      getStampDirectory();
+
+    await fs.mkdir(
+      managedStampDirectory,
+      {
+        recursive: true,
+      }
+    );
+
+    const installedDefaultStamps: {
+      filePath: string;
+      name: string;
+    }[] = [];
+
+    for (
+      const definition of
+        DEFAULT_STAMP_DEFINITIONS
+    ) {
+      const bundledFilePath =
+        path.join(
+          bundledStampDirectory,
+          definition.fileName
+        );
+
+      const managedFilePath =
+        path.join(
+          managedStampDirectory,
+          `default-${definition.fileName}`
+        );
+
+      await fs.copyFile(
+        bundledFilePath,
+        managedFilePath
+      );
+
+      installedDefaultStamps.push({
+        filePath: managedFilePath,
+        name: definition.displayName,
+      });
+    }
+
+    return installedDefaultStamps;
+  }
+);
+
+//add new stamp image handler 
 ipcMain.handle('open-stamp-image', async () => {
   const result = await dialog.showOpenDialog({
     properties: ['openFile'],
