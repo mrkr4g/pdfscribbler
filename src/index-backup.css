@@ -1,0 +1,177 @@
+#pdfWorkspace {
+  display: flex;
+  gap: 20px;
+  height: calc(100vh - 140px);
+  min-height: 0;
+}
+
+button {
+  border: 0px;
+  border-radius: 10px;
+  padding: 10px;
+  color: lightblue;
+  background-color: darkblue;
+  font-weight: bold;
+}
+
+button:disabled {
+  background-color: lightgray;
+  color: darkgray;
+}
+
+#thumbnailPanel {
+  width: 180px;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+#thumbnailPanel canvas {
+  display: block;
+  width: 150px;
+  height: auto;
+  margin-bottom: 10px;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+#thumbnailPanel canvas.selected {
+  border-color: blue;
+}
+
+#mainViewer {
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+  padding: 10px;
+  text-align: center;
+  position: relative;
+}
+
+#pageCanvasContainer {
+  position: relative;
+  display: inline-block;
+}
+
+#pdfCanvas {
+  display: block;
+  max-width: none;
+}
+
+#stampCanvas {
+  position: absolute;
+  inset: 0;
+  cursor: crosshair;
+}
+
+#stampChooser {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+#stampChooserLabel {
+  flex-shrink: 0;
+  font-weight: bold;
+}
+
+#stampThumbnailRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  min-width: 250px;
+  max-width: 500px;
+  height: 74px;
+
+  padding: 5px;
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  border: 1px solid #aaa;
+}
+
+.stamp-thumbnail {
+  box-sizing: border-box;
+  flex: 0 0 64px;
+
+  width: 64px;
+  height: 64px;
+
+  padding: 4px;
+  object-fit: contain;
+
+  background: white;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.stamp-thumbnail:hover {
+  border-color: #999;
+}
+
+.stamp-thumbnail.selected {
+  border-color: blue;
+}
+
+.stamp-thumbnail {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  padding: 3px;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+}
+
+.stamp-thumbnail:hover {
+  border-color: #999;
+}
+
+.stamp-thumbnail.selected {
+  border-color: blue;
+}
+
+.stamp-thumbnail img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+#loadingIndicator {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+
+  background-color: rgba(255, 255, 255, 0.8);
+  font-weight: bold;
+}
+
+#loadingIndicator[hidden] {
+  display: none;
+}
+
+.loadingSpinner {
+  width: 40px;
+  height: 40px;
+
+  border: 5px solid lightgray;
+  border-top-color: darkblue;
+  border-radius: 50%;
+
+  animation: loadingSpinnerRotation 0.8s linear infinite;
+}
+
+@keyframes loadingSpinnerRotation {
+  to {
+    transform: rotate(360deg);
+  }
+}

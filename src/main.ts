@@ -18,12 +18,28 @@ interface DefaultStampDefinition {
 
 const DEFAULT_STAMP_DEFINITIONS: DefaultStampDefinition[] = [
   {
-    fileName: 'approved.jpg',
+    fileName: 'bwscribble.png',
+    displayName: 'BWs scribble',
+  },
+  {
+    fileName: 'approved.png',
     displayName: 'Approved',
   },
   {
-    fileName: 'received.png',
-    displayName: 'Received',
+    fileName: 'reviewed.png',
+    displayName: 'Reviewed',
+  },
+  {
+    fileName: 'green-check.png',
+    displayName: 'Check Mark',
+  },
+  {
+    fileName: 'red-cross.png',
+    displayName: 'Cross Out',
+  },
+  {
+    fileName: 'sent-stamp.png',
+    displayName: 'Sent',
   },
 ];
 
