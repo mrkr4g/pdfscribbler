@@ -1,13 +1,15 @@
-import type { StampImage } from './pdfTypes';
+import {
+  renderHandwrittenText
+} from './handwrittenTextRenderer';
+
+import type {
+  StampImage
+} from './pdfTypes';
 
 export type DynamicTextGeneratorId =
   | 'date'
   | 'time'
   | 'datetime';
-
-const textFontSize = 64;
-const horizontalPadding = 12;
-const verticalPadding = 8;
 
 export function formatCurrentDate(
   date: Date = new Date()
@@ -115,76 +117,17 @@ createDynamicTextStampImage(
   name: string,
   preferredWidthRatio: number
 ): Promise<StampImage> {
-  const measurementCanvas =
-    document.createElement('canvas');
-
-  const measurementContext =
-    measurementCanvas.getContext('2d');
-
-  if (!measurementContext) {
-    throw new Error(
-      'Could not create the text measurement canvas.'
-    );
-  }
-
-  const font =
-    `${textFontSize}px sans-serif`;
-
-  measurementContext.font =
-    font;
-
-  const measuredWidth =
-    Math.ceil(
-      measurementContext
-        .measureText(text)
-        .width
-    );
-
   const textCanvas =
-    document.createElement('canvas');
-
-  textCanvas.width =
-    measuredWidth +
-    horizontalPadding * 2;
-
-  textCanvas.height =
-    textFontSize +
-    verticalPadding * 2;
-
-  const context =
-    textCanvas.getContext('2d');
-
-  if (!context) {
-    throw new Error(
-      'Could not create the dynamic text canvas.'
-    );
-  }
-
-  context.font =
-    font;
-
-  context.fillStyle =
-    'black';
-
-  context.textAlign =
-    'left';
-
-  context.textBaseline =
-    'middle';
-
-  context.fillText(
-    text,
-    horizontalPadding,
-    textCanvas.height / 2
+  await renderHandwrittenText(
+    text
   );
 
-  const image =
-    await loadGeneratedImage(
-      textCanvas.toDataURL(
-        'image/png'
-      )
-    );
-
+const image =
+  await loadGeneratedImage(
+    textCanvas.toDataURL(
+      'image/png'
+    )
+  );
   return {
     id: crypto.randomUUID(),
     name,
