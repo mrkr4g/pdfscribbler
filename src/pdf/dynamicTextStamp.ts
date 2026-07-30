@@ -9,7 +9,8 @@ import type {
 export type DynamicTextGeneratorId =
   | 'date'
   | 'time'
-  | 'datetime';
+  | 'datetime'
+  | 'freeText';
 
 export function formatCurrentDate(
   date: Date = new Date()
@@ -64,7 +65,8 @@ export function formatCurrentDateTime(
 export async function
 createDynamicTextGeneratorStampImage(
   generatorId: DynamicTextGeneratorId,
-  preferredWidthRatio: number
+  preferredWidthRatio: number,
+  freeText?: string
 ): Promise<StampImage> {
   const currentDateTime =
     new Date();
@@ -102,6 +104,24 @@ createDynamicTextGeneratorStampImage(
       name =
         `Date and time ${text}`;
       break;
+
+      case 'freeText': {
+        const normalizedText =
+          freeText?.trim();
+  
+        if (!normalizedText) {
+          throw new Error(
+            'Free text is required.'
+          );
+        }
+  
+        text =
+          normalizedText;
+  
+        name =
+          `Free text ${normalizedText}`;
+        break;
+      }
   }
 
   return createDynamicTextStampImage(

@@ -22,6 +22,7 @@ const defaultDynamicTextWidthRatios:
     date: 0.15,
     time: 0.12,
     datetime: 0.26,
+    freeText: 0.20,
   };
 const DEFAULT_STAMPS_SEEDED_KEY =
   'pdfscribbler.defaultStampsSeeded';
@@ -120,6 +121,13 @@ loadDynamicTextPreferredWidthRatios():
           savedRatios.datetime,
           defaultDynamicTextWidthRatios
             .datetime
+        ),
+
+        freeText:
+        readPreferredWidthRatio(
+          savedRatios.freeText,
+          defaultDynamicTextWidthRatios
+            .freeText
         ),
     };
   } catch {

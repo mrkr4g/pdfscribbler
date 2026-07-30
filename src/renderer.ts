@@ -74,6 +74,25 @@ const loadingIndicator = document.getElementById('loadingIndicator') as HTMLDivE
 const addStampButton = document.getElementById('addStampButton') as HTMLButtonElement;
 const removeStampButton = document.getElementById('removeStampButton') as HTMLButtonElement;
 const stampThumbnailRow = document.getElementById('stampThumbnailRow') as HTMLDivElement;
+const freeTextDialog =
+  document.getElementById(
+    'freeTextDialog'
+  ) as HTMLDialogElement;
+
+const freeTextForm =
+  document.getElementById(
+    'freeTextForm'
+  ) as HTMLFormElement;
+
+const freeTextInput =
+  document.getElementById(
+    'freeTextInput'
+  ) as HTMLInputElement;
+
+const freeTextCancelButton =
+  document.getElementById(
+    'freeTextCancelButton'
+  ) as HTMLButtonElement;
 const restoredStamps: StampImage[] = [];
 const savePageButton = document.getElementById('savePageButton') as HTMLButtonElement;
 const saveAndCloseButton =
@@ -141,6 +160,8 @@ type FitMode = 'width' | 'height';
 let selectedDynamicTextGeneratorId:
   DynamicTextGeneratorId | null =
     null;
+let selectedFreeTextValue =
+'';
 
     const dynamicTextGeneratorOptions:
     Array<{
@@ -166,7 +187,90 @@ let selectedDynamicTextGeneratorId:
         title:
           'Place the current date and time',
       },
+      {
+        id: 'freeText',
+        label: 'FREE\nTEXT',
+        title:
+          'Enter handwritten text to place',
+      },
     ];
+
+    function openFreeTextDialog():
+    void {
+    freeTextInput.value =
+      selectedFreeTextValue;
+  
+    freeTextInput.setCustomValidity(
+      ''
+    );
+  
+    if (!freeTextDialog.open) {
+      freeTextDialog.showModal();
+    }
+  
+    window.setTimeout(
+      () => {
+        freeTextInput.focus();
+        freeTextInput.select();
+      },
+      0
+    );
+  }
+
+  freeTextForm.addEventListener(
+    'submit',
+    event => {
+      event.preventDefault();
+  
+      const enteredText =
+        freeTextInput.value.trim();
+  
+      if (!enteredText) {
+        freeTextInput.setCustomValidity(
+          'Enter text to place.'
+        );
+  
+        freeTextInput.reportValidity();
+        return;
+      }
+  
+      selectedFreeTextValue =
+        enteredText;
+  
+      selectedDynamicTextGeneratorId =
+        'freeText';
+  
+      freeTextInput.setCustomValidity(
+        ''
+      );
+  
+      freeTextDialog.close();
+  
+      renderStampThumbnails();
+    }
+  );
+
+  freeTextInput.addEventListener(
+    'input',
+    () => {
+      freeTextInput.setCustomValidity(
+        ''
+      );
+    }
+  );
+
+  freeTextCancelButton
+  .addEventListener(
+    'click',
+    () => {
+      freeTextInput
+        .setCustomValidity(
+          ''
+        );
+
+      freeTextDialog.close();
+    }
+  );
 
 //new version of open pdf button listener
 //button click event listener for opening pdf button
@@ -786,26 +890,39 @@ const dynamicTextGeneratorId =
 selectedDynamicTextGeneratorId;
 
 if (dynamicTextGeneratorId) {
-selectedStamp =
-  await createDynamicTextGeneratorStampImage(
-    dynamicTextGeneratorId,
-    dynamicTextPreferredWidthRatios[
-      dynamicTextGeneratorId
-    ]
+  if (
+    dynamicTextGeneratorId ===
+      'freeText' &&
+    !selectedFreeTextValue
+  ) {
+    openFreeTextDialog();
+    return;
+  }
+
+  selectedStamp =
+    await createDynamicTextGeneratorStampImage(
+      dynamicTextGeneratorId,
+      dynamicTextPreferredWidthRatios[
+        dynamicTextGeneratorId
+      ],
+      dynamicTextGeneratorId ===
+        'freeText'
+        ? selectedFreeTextValue
+        : undefined
+    );
+
+  generatedStampImages.set(
+    selectedStamp.id,
+    selectedStamp
   );
 
-generatedStampImages.set(
-  selectedStamp.id,
-  selectedStamp
-);
-
-generatedStampGeneratorIds.set(
-  selectedStamp.id,
-  dynamicTextGeneratorId
-);
+  generatedStampGeneratorIds.set(
+    selectedStamp.id,
+    dynamicTextGeneratorId
+  );
 } else {
-selectedStamp =
-  getSelectedStampImage();
+  selectedStamp =
+    getSelectedStampImage();
 }
 
     if (!selectedStamp) {
@@ -1336,6 +1453,14 @@ function renderStampThumbnails(): void {
     thumbnail.addEventListener(
       'click',
       () => {
+        if (
+          generatorOption.id ===
+            'freeText'
+        ) {
+          openFreeTextDialog();
+          return;
+        }
+
         selectedDynamicTextGeneratorId =
           generatorOption.id;
 

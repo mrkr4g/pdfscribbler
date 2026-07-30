@@ -41,6 +41,43 @@
     
     </div>
 
+    <dialog
+      id="freeTextDialog"
+      aria-labelledby="freeTextDialogTitle"
+    >
+      <form id="freeTextForm">
+        <h2 id="freeTextDialogTitle">
+          Free Text
+        </h2>
+
+        <label for="freeTextInput">
+          Text to place
+        </label>
+
+        <input
+          id="freeTextInput"
+          name="freeText"
+          type="text"
+          maxlength="80"
+          autocomplete="off"
+          required
+        />
+
+        <div class="free-text-dialog-actions">
+          <button
+            id="freeTextCancelButton"
+            type="button"
+          >
+            Cancel
+          </button>
+
+          <button type="submit">
+            Use Text
+          </button>
+        </div>
+      </form>
+    </dialog>
+
     <script type="module" src="/src/renderer.ts"></script>
   </body>
 </html>
