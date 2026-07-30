@@ -31,6 +31,10 @@ import { loadPdf, getPage, hasDocument } from './pdf/pdfDocument';
 import { renderPage } from './pdf/pdfRenderer';
 import { createThumbnails } from './pdf/pdfThumbnails';
 import { loadStampImage } from './pdf/stampImageLoader';
+import {
+  createDynamicTextGeneratorStampImage,
+  type DynamicTextGeneratorId,
+} from './pdf/dynamicTextStamp';
 import { exportActivePage } from './pdf/pdfExporter';
 import {
   addStampImage,
@@ -45,9 +49,11 @@ import {
 } from './pdf/stampLibrary';
 import {
   haveDefaultStampsBeenSeeded,
+  loadDynamicTextPreferredWidthRatios,
   loadSelectedStampId,
   loadStampLibrary,
   markDefaultStampsSeeded,
+  saveDynamicTextPreferredWidthRatios,
   saveSelectedStampId,
   saveStampLibrary,
 } from './pdf/stampStorage';
@@ -82,6 +88,14 @@ let savedPdfFilePath: string | null = null;
 let placedStamp: PlacedStamp | null = null;
 const placedStamps: PlacedStamp[] = [];
 const detachedStampImages = new Map<string, StampImage>();
+const generatedStampImages = new Map<string, StampImage>();
+const generatedStampGeneratorIds =
+  new Map<
+    string,
+    DynamicTextGeneratorId
+  >();
+const dynamicTextPreferredWidthRatios =
+  loadDynamicTextPreferredWidthRatios();
 let selectedThumbnail: HTMLCanvasElement | null = null;
 let fitMode: FitMode = 'width';
 let isDraggingStamp = false;
@@ -123,6 +137,36 @@ const resizeHandleSize = 12;
 const minimumStampWidthRatio = 0.01;
 
 type FitMode = 'width' | 'height';
+
+let selectedDynamicTextGeneratorId:
+  DynamicTextGeneratorId | null =
+    null;
+
+    const dynamicTextGeneratorOptions:
+    Array<{
+      id: DynamicTextGeneratorId;
+      label: string;
+      title: string;
+    }> = [
+      {
+        id: 'date',
+        label: 'DATE',
+        title:
+          "Place today's date as MM/DD/YYYY",
+      },
+      {
+        id: 'time',
+        label: 'TIME',
+        title:
+          'Place the current time as h:mm AM/PM',
+      },
+      {
+        id: 'datetime',
+        label: 'DATE\nTIME',
+        title:
+          'Place the current date and time',
+      },
+    ];
 
 //new version of open pdf button listener
 //button click event listener for opening pdf button
@@ -194,6 +238,8 @@ async function openPdfFile(
     // Clear stamps belonging to the previous document.
     placedStamps.length = 0;
     detachedStampImages.clear();
+    generatedStampImages.clear();
+    generatedStampGeneratorIds.clear();
     placedStamp = null;
 
     isPlacedStampSelected =
@@ -523,6 +569,7 @@ function getRenderableStampImages():
   return [
     ...getStampImages(),
     ...detachedStampImages.values(),
+    ...generatedStampImages.values(),
   ];
 }
 
@@ -637,7 +684,7 @@ context.restore();
 //pointer down event listener
 stampCanvas.addEventListener(
   'pointerdown',
-  event => {
+  async event => {
     if (!hasDocument()) {
       return;
     }
@@ -732,8 +779,34 @@ if (
 }
 
 //obtain the currently selected stamp
-    const selectedStamp =
-      getSelectedStampImage();
+let selectedStamp:
+StampImage | null;
+
+const dynamicTextGeneratorId =
+selectedDynamicTextGeneratorId;
+
+if (dynamicTextGeneratorId) {
+selectedStamp =
+  await createDynamicTextGeneratorStampImage(
+    dynamicTextGeneratorId,
+    dynamicTextPreferredWidthRatios[
+      dynamicTextGeneratorId
+    ]
+  );
+
+generatedStampImages.set(
+  selectedStamp.id,
+  selectedStamp
+);
+
+generatedStampGeneratorIds.set(
+  selectedStamp.id,
+  dynamicTextGeneratorId
+);
+} else {
+selectedStamp =
+  getSelectedStampImage();
+}
 
     if (!selectedStamp) {
       return;
@@ -938,14 +1011,28 @@ stampCanvas.addEventListener(
           1
         );
     
-      setStampPreferredWidthRatio(
-        placedStamp.stampImageId,
-        preferredWidthRatio
-      );
-    
-      saveCurrentStampState();
+        const dynamicTextGeneratorId =
+        generatedStampGeneratorIds.get(
+          placedStamp.stampImageId
+        );
+      
+      if (dynamicTextGeneratorId) {
+        dynamicTextPreferredWidthRatios[
+          dynamicTextGeneratorId
+        ] = preferredWidthRatio;
+      
+        saveDynamicTextPreferredWidthRatios(
+          dynamicTextPreferredWidthRatios
+        );
+      } else {
+        setStampPreferredWidthRatio(
+          placedStamp.stampImageId,
+          preferredWidthRatio
+        );
+      
+        saveCurrentStampState();
     }
-    
+  }
     const point =
       getStampCanvasPoint(event);
 
@@ -1000,7 +1087,15 @@ window.addEventListener(
       stampIndex,
       1
     );
+    
+    generatedStampImages.delete(
+      placedStamp.stampImageId
+    );
 
+    generatedStampGeneratorIds.delete(
+      placedStamp.stampImageId
+    );
+    
     placedStamp = null;
     isPlacedStampSelected = false;
     isDraggingStamp = false;
@@ -1194,40 +1289,122 @@ removeStampButton.addEventListener(
 function renderStampThumbnails(): void {
   stampThumbnailRow.replaceChildren();
 
-  const stampImages = getStampImages();
-  const selectedStamp = getSelectedStampImage();
-  removeStampButton.disabled = selectedStamp === null;
+  const stampImages =
+    getStampImages();
 
-  for (const stampImage of stampImages) {
+  const selectedStamp =
+    getSelectedStampImage();
+
+  const isDynamicTextGeneratorSelected =
+    selectedDynamicTextGeneratorId !==
+      null;
+
+  removeStampButton.disabled =
+    isDynamicTextGeneratorSelected ||
+    selectedStamp === null;
+
+  for (
+    const generatorOption of
+    dynamicTextGeneratorOptions
+  ) {
     const thumbnail =
       document.createElement('button');
 
-    thumbnail.type = 'button';
-    thumbnail.classList.add('stamp-thumbnail');
-    thumbnail.title = stampImage.name;
+    thumbnail.type =
+      'button';
 
-    if (stampImage.id === selectedStamp?.id) {
-      thumbnail.classList.add('selected');
+    thumbnail.classList.add(
+      'stamp-thumbnail',
+      'dynamic-text-thumbnail'
+    );
+
+    thumbnail.title =
+      generatorOption.title;
+
+    thumbnail.textContent =
+      generatorOption.label;
+
+    if (
+      selectedDynamicTextGeneratorId ===
+        generatorOption.id
+    ) {
+      thumbnail.classList.add(
+        'selected'
+      );
+    }
+
+    thumbnail.addEventListener(
+      'click',
+      () => {
+        selectedDynamicTextGeneratorId =
+          generatorOption.id;
+
+        renderStampThumbnails();
+      }
+    );
+
+    stampThumbnailRow.appendChild(
+      thumbnail
+    );
+  }
+
+  for (
+    const stampImage of stampImages
+  ) {
+    const thumbnail =
+      document.createElement('button');
+
+    thumbnail.type =
+      'button';
+
+    thumbnail.classList.add(
+      'stamp-thumbnail'
+    );
+
+    thumbnail.title =
+      stampImage.name;
+
+    if (
+      !isDynamicTextGeneratorSelected &&
+      stampImage.id ===
+        selectedStamp?.id
+    ) {
+      thumbnail.classList.add(
+        'selected'
+      );
     }
 
     const image =
       document.createElement('img');
 
-    image.src = stampImage.image.src;
-    image.alt = stampImage.name;
+    image.src =
+      stampImage.image.src;
 
-    thumbnail.appendChild(image);
+    image.alt =
+      stampImage.name;
+
+    thumbnail.appendChild(
+      image
+    );
 
     thumbnail.addEventListener(
       'click',
       () => {
-        selectStampImage(stampImage.id);
+        selectedDynamicTextGeneratorId =
+          null;
+
+        selectStampImage(
+          stampImage.id
+        );
+
         saveCurrentStampState();
         renderStampThumbnails();
-        }
+      }
     );
 
-    stampThumbnailRow.appendChild(thumbnail);
+    stampThumbnailRow.appendChild(
+      thumbnail
+    );
   }
 }
 

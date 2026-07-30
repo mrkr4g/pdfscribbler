@@ -1,7 +1,28 @@
-import type { SavedStampImage } from './pdfTypes';
+import type {
+  DynamicTextGeneratorId
+} from './dynamicTextStamp';
+
+import type {
+  SavedStampImage
+} from './pdfTypes';
 
 const STAMP_LIBRARY_KEY = 'pdfscribbler.stampLibrary';
 const SELECTED_STAMP_KEY = 'pdfscribbler.selectedStampId';
+const DYNAMIC_TEXT_WIDTH_RATIOS_KEY =
+  'pdfscribbler.dynamicTextPreferredWidthRatios';
+
+export type DynamicTextPreferredWidthRatios =
+  Record<
+    DynamicTextGeneratorId,
+    number
+  >;
+
+const defaultDynamicTextWidthRatios:
+  DynamicTextPreferredWidthRatios = {
+    date: 0.15,
+    time: 0.12,
+    datetime: 0.26,
+  };
 const DEFAULT_STAMPS_SEEDED_KEY =
   'pdfscribbler.defaultStampsSeeded';
 
@@ -52,6 +73,93 @@ export function loadSelectedStampId(): string | null {
   return localStorage.getItem(
     SELECTED_STAMP_KEY
   );
+}
+
+export function
+loadDynamicTextPreferredWidthRatios():
+  DynamicTextPreferredWidthRatios {
+  const savedValue =
+    localStorage.getItem(
+      DYNAMIC_TEXT_WIDTH_RATIOS_KEY
+    );
+
+  if (!savedValue) {
+    return {
+      ...defaultDynamicTextWidthRatios,
+    };
+  }
+
+  try {
+    const savedRatios =
+      JSON.parse(
+        savedValue
+      ) as Partial<
+        Record<
+          DynamicTextGeneratorId,
+          unknown
+        >
+      >;
+
+    return {
+      date:
+        readPreferredWidthRatio(
+          savedRatios.date,
+          defaultDynamicTextWidthRatios
+            .date
+        ),
+
+      time:
+        readPreferredWidthRatio(
+          savedRatios.time,
+          defaultDynamicTextWidthRatios
+            .time
+        ),
+
+      datetime:
+        readPreferredWidthRatio(
+          savedRatios.datetime,
+          defaultDynamicTextWidthRatios
+            .datetime
+        ),
+    };
+  } catch {
+    console.error(
+      'Saved dynamic text sizes could not be read.'
+    );
+
+    return {
+      ...defaultDynamicTextWidthRatios,
+    };
+  }
+}
+
+export function
+saveDynamicTextPreferredWidthRatios(
+  preferredWidthRatios:
+    DynamicTextPreferredWidthRatios
+): void {
+  localStorage.setItem(
+    DYNAMIC_TEXT_WIDTH_RATIOS_KEY,
+    JSON.stringify(
+      preferredWidthRatios
+    )
+  );
+}
+
+function readPreferredWidthRatio(
+  value: unknown,
+  fallback: number
+): number {
+  if (
+    typeof value === 'number' &&
+    Number.isFinite(value) &&
+    value > 0 &&
+    value <= 1
+  ) {
+    return value;
+  }
+
+  return fallback;
 }
 
 export function haveDefaultStampsBeenSeeded(): boolean {
