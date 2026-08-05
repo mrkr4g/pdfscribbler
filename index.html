@@ -27,16 +27,34 @@
 
       <div id="thumbnailPanel"></div>
     
-      <div id="mainViewer">
+      <div id="mainViewerShell">
+        <div id="zoomControls">
+          <button
+            id="zoomOutButton"
+            type="button"
+            title="Zoom out"
+            aria-label="Zoom out"
+            disabled
+          ></button>
+          <button
+            id="zoomInButton"
+            type="button"
+            title="Zoom in"
+            aria-label="Zoom in"
+            disabled
+          ></button>
+        </div>
         <div id="loadingIndicator" role="status" aria-live="polite" hidden>
           <div class="loadingSpinner" aria-hidden="true"></div>
             <span>Loading PDF...</span>
         </div>
-        <div id="pageCanvasContainer">
+        <div id="mainViewer">
+          <div id="pageCanvasContainer">
 
-        <canvas id="pdfCanvas"></canvas>
-        <canvas id="stampCanvas"></canvas>
-          </div>
+          <canvas id="pdfCanvas"></canvas>
+          <canvas id="stampCanvas"></canvas>
+            </div>
+        </div>
       </div>
     
     </div>

@@ -69,6 +69,8 @@ const stampCanvas = document.getElementById('stampCanvas') as HTMLCanvasElement;
 const thumbnailPanel = document.getElementById('thumbnailPanel') as HTMLDivElement;
 const fitWidthButton = document.getElementById('fitWidthButton') as HTMLButtonElement;
 const fitHeightButton = document.getElementById('fitHeightButton') as HTMLButtonElement;
+const zoomInButton = document.getElementById('zoomInButton') as HTMLButtonElement;
+const zoomOutButton = document.getElementById('zoomOutButton') as HTMLButtonElement;
 const mainViewer = document.getElementById('mainViewer') as HTMLDivElement;
 const loadingIndicator = document.getElementById('loadingIndicator') as HTMLDivElement;
 const addStampButton = document.getElementById('addStampButton') as HTMLButtonElement;
@@ -155,7 +157,14 @@ saveStatus.addEventListener(
 const resizeHandleSize = 12;
 const minimumStampWidthRatio = 0.01;
 
-type FitMode = 'width' | 'height';
+type FitMode = 'width' | 'height' | 'custom';
+
+const minimumPdfZoomScale = 0.25;
+const maximumPdfZoomScale = 4;
+const pdfZoomStepFactor = 1.2;
+
+let customPdfZoomScale = 1;
+let lastRenderPdfScale = 1;
 
 let selectedDynamicTextGeneratorId:
   DynamicTextGeneratorId | null =
@@ -317,6 +326,10 @@ async function openPdfFile(
     true;
   fitHeightButton.disabled =
     true;
+  zoomInButton.disabled =
+    true;
+  zoomOutButton.disabled =
+    true;
   savePageButton.disabled =
     true;
   saveAndCloseButton.disabled =
@@ -356,6 +369,8 @@ async function openPdfFile(
 
     currentPageNumber = 1;
     fitMode = 'width';
+    customPdfZoomScale = 1;
+    lastRenderPdfScale = 1;
 
     const thumbnails =
       await createThumbnails();
@@ -414,6 +429,7 @@ async function openPdfFile(
       false;
     fitHeightButton.disabled =
       false;
+    updateZoomButtonState();
     savePageButton.disabled =
       false;
     saveAndCloseButton.disabled =
@@ -449,6 +465,51 @@ fitHeightButton.addEventListener('click', async () => {
   fitMode = 'height';
   await renderPdf();
 });
+
+zoomInButton.addEventListener('click', async () => {
+  if (!hasDocument()) {
+    return;
+  }
+
+  const newScale = Math.min(
+    lastRenderPdfScale * pdfZoomStepFactor,
+    maximumPdfZoomScale
+  );
+
+  customPdfZoomScale = newScale;
+  fitMode = 'custom';
+
+  await renderPdf({ preserveScrollCenter: true });
+});
+
+zoomOutButton.addEventListener('click', async () => {
+  if (!hasDocument()) {
+    return;
+  }
+
+  const newScale = Math.max(
+    lastRenderPdfScale / pdfZoomStepFactor,
+    minimumPdfZoomScale
+  );
+
+  customPdfZoomScale = newScale;
+  fitMode = 'custom';
+
+  await renderPdf({ preserveScrollCenter: true });
+});
+
+function updateZoomButtonState(): void {
+  if (!hasDocument()) {
+    zoomInButton.disabled = true;
+    zoomOutButton.disabled = true;
+    return;
+  }
+
+  zoomOutButton.disabled =
+    lastRenderPdfScale <= minimumPdfZoomScale;
+  zoomInButton.disabled =
+    lastRenderPdfScale >= maximumPdfZoomScale;
+}
 
 //save pdf buttons
 savePageButton.addEventListener(
@@ -605,11 +666,38 @@ async function saveActivePage(
   }
 }
 
+type RenderPdfOptions = {
+  preserveScrollCenter?: boolean;
+};
+
 //render the selected pdf page
-async function renderPdf() {
+async function renderPdf(
+  options: RenderPdfOptions = {}
+): Promise<void> {
   if (!hasDocument()) {
     return;
   }
+
+  let scrollCenterRatioX: number | null = null;
+  let scrollCenterRatioY: number | null = null;
+
+  if (options.preserveScrollCenter) {
+    const scrollWidth = mainViewer.scrollWidth;
+    const scrollHeight = mainViewer.scrollHeight;
+
+    if (scrollWidth > 0 && scrollHeight > 0) {
+      scrollCenterRatioX =
+        (mainViewer.scrollLeft +
+          mainViewer.clientWidth / 2) /
+        scrollWidth;
+
+      scrollCenterRatioY =
+        (mainViewer.scrollTop +
+          mainViewer.clientHeight / 2) /
+        scrollHeight;
+    }
+  }
+
   const previousCanvasWidth = stampCanvas.width;
   const previousCanvasHeight = stampCanvas.height;
   const page = await getPage(currentPageNumber);
@@ -623,12 +711,22 @@ async function renderPdf() {
   let scale: number;
   if (fitMode === 'height') {
     scale = availableHeight / unscaledViewport.height;
+  } else if (fitMode === 'custom') {
+    scale = customPdfZoomScale;
   } else {
     scale = availableWidth / unscaledViewport.width;
   }
   // Prevent invalid or extremely tiny scales if the viewer has not
   // finished laying out yet.
   scale = Math.max(scale, 0.1);
+  scale = Math.min(
+    scale,
+    maximumPdfZoomScale
+  );
+  lastRenderPdfScale = scale;
+  if (fitMode === 'custom') {
+    customPdfZoomScale = scale;
+  }
   await renderPage(page, canvas, scale);
   stampCanvas.width = canvas.width;
   stampCanvas.height = canvas.height;
@@ -665,6 +763,22 @@ if (
 //add any stamps that are placed to the page rendering
 renderPlacedStamp();
 
+  if (
+    scrollCenterRatioX !== null &&
+    scrollCenterRatioY !== null
+  ) {
+    mainViewer.scrollLeft =
+      scrollCenterRatioX *
+        mainViewer.scrollWidth -
+      mainViewer.clientWidth / 2;
+
+    mainViewer.scrollTop =
+      scrollCenterRatioY *
+        mainViewer.scrollHeight -
+      mainViewer.clientHeight / 2;
+  }
+
+  updateZoomButtonState();
 }
 
 //helper for renderable images, this keeps used stamps on a page if they are deleted from the stamp library
