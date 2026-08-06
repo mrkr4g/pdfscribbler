@@ -7,20 +7,93 @@
   </head>
   <body>
     <p id="selectedFile">No file selected.</p>
-    <button id="openPdfButton">Open PDF</button>
-    <button id="fitWidthButton" disabled>Fit Width</button>
-    <button id="fitHeightButton" disabled>Fit Height</button>
-    <button id="savePageButton" type="button" disabled>Save This Page</button>
-    <button id="saveAndCloseButton" type="button" disabled>Save Page and Close</button>
 
-<a id="saveStatus" href="#"></a>
+    <div
+      id="topToolbar"
+      role="toolbar"
+      aria-label="PDF actions"
+    >
+      <button
+        id="openPdfButton"
+        type="button"
+        title="Open PDF"
+        aria-label="Open PDF"
+      ></button>
+    
+      <button
+        id="fitWidthButton"
+        type="button"
+        title="Fit page to width"
+        aria-label="Fit page to width"
+        disabled
+      ></button>
+    
+      <button
+        id="fitHeightButton"
+        type="button"
+        title="Fit page to height"
+        aria-label="Fit page to height"
+        disabled
+      ></button>
+    
+      <button
+        id="savePageButton"
+        type="button"
+        title="Save active page"
+        aria-label="Save active page"
+        disabled
+      ></button>
+    
+      <button
+        id="saveAndCloseButton"
+        type="button"
+        disabled
+      >
+        Save Page and Close
+      </button>
+    
+      <button
+        id="saveEncryptedButton"
+        type="button"
+        title="Save encrypted PDF"
+        aria-label="Save encrypted PDF"
+        disabled
+      >
+        Save Encrypted
+      </button>
+    </div>
+    
+    <a id="saveStatus" href="#"></a>
+    
     <div id="stampChooser">
+      <div
+        id="dynamicTextButtonRow"
+        role="toolbar"
+        aria-label="Dynamic text stamps"
+      ></div>
+    
+      <div
+        id="stampThumbnailRow"
+        aria-label="Image stamps"
+      ></div>
+    
+      <button
+        id="addStampButton"
+        type="button"
+        title="Add new image stamp"
+        aria-label="Add new image stamp"
+      ></button>
+    
+      <button
+  id="removeStampButton"
+  type="button"
+  title="Remove selected stamp from library"
+  aria-label="Remove selected stamp from library"
+  disabled
+></button>
+    </div>
+    
       
-     
-      <div id="stampThumbnailRow"></div>
-    <button id="addStampButton">New Stamp</button>
-    <button id="removeStampButton" type="button" disabled>Remove from Library</button>
-     
     </div>
     <hr>
     <div id="pdfWorkspace">

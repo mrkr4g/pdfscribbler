@@ -60,14 +60,21 @@ body {
   overflow: hidden;
 
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) repeat(5, max-content);
-  grid-template-rows: auto auto auto 1px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows:
+    auto
+    auto
+    auto
+    auto
+    1px
+    minmax(0, 1fr);
   grid-template-areas:
-    "file open fit-width fit-height save save-close"
-    "status status status status status status"
-    "stamps stamps stamps stamps stamps stamps"
-    "divider divider divider divider divider divider"
-    "workspace workspace workspace workspace workspace workspace";
+    "file"
+    "toolbar"
+    "status"
+    "stamps"
+    "divider"
+    "workspace";
   gap: 12px;
 
   color: var(--text);
@@ -94,32 +101,35 @@ body {
   grid-area: file;
 }
 
-#openPdfButton {
-  grid-area: open;
-}
+#topToolbar {
+  grid-area: toolbar;
 
-#fitWidthButton {
-  grid-area: fit-width;
-}
+  min-width: 0;
+  padding: 8px;
 
-#fitHeightButton {
-  grid-area: fit-height;
-}
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
 
-#savePageButton {
-  grid-area: save;
-}
+  overflow-x: auto;
+  overflow-y: hidden;
 
-#saveAndCloseButton {
-  grid-area: save-close;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.022),
+      transparent
+    ),
+    var(--surface);
+
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-large);
+  box-shadow: var(--panel-shadow);
 }
 
 #saveStatus {
   grid-area: status;
-}
-
-#stampChooser {
-  grid-area: stamps;
 }
 
 body > hr {
@@ -292,6 +302,55 @@ button:disabled {
     0 0 18px rgba(33, 150, 243, 0.12);
 }
 
+#saveEncryptedButton {
+  color: #ffd7dc;
+
+  border-color:
+    rgba(255, 119, 133, 0.58);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 119, 133, 0.16),
+      transparent 72%
+    ),
+    #2b1d24;
+}
+
+#saveEncryptedButton:hover:not(:disabled) {
+  color: #ffffff;
+  border-color: var(--danger);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 119, 133, 0.22),
+      transparent
+    ),
+    #382029;
+
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.34),
+    0 0 18px rgba(255, 119, 133, 0.18);
+}
+
+#saveEncryptedButton:disabled {
+  color: #bd7b83;
+
+  border-color:
+    rgba(255, 119, 133, 0.34);
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 119, 133, 0.08),
+      transparent
+    ),
+    #241a20;
+
+  opacity: 0.78;
+}
+
 #removeStampButton:not(:disabled) {
   color: #ffd7dc;
   border-color: rgba(255, 119, 133, 0.42);
@@ -311,11 +370,16 @@ button:disabled {
 /* ---------- Stamp chooser ---------- */
 
 #stampChooser {
+  grid-area: stamps;
   min-width: 0;
   padding: 10px;
 
   display: grid;
-  grid-template-columns: minmax(250px, 1fr) max-content max-content;
+  grid-template-columns:
+  max-content
+  minmax(250px, 1fr)
+  54px
+  54px;
   align-items: center;
   gap: 10px;
 
@@ -327,6 +391,14 @@ button:disabled {
   box-shadow: var(--panel-shadow);
 }
 
+#dynamicTextButtonRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  overflow: visible;
+}
+
 #stampChooserLabel {
   flex-shrink: 0;
   color: var(--text-secondary);
@@ -334,9 +406,10 @@ button:disabled {
 }
 
 #stampThumbnailRow {
-  min-width: 250px;
+  min-width: 0px;
   height: 70px;
   padding: 7px;
+  flex: 1 1 auto;
 
   display: flex;
   align-items: center;
@@ -812,53 +885,12 @@ body > hr {
 
 /* ---------- Responsive layouts ---------- */
 
-@media (max-width: 1180px) {
-  body {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-rows: auto auto auto auto auto 1px minmax(0, 1fr);
-    grid-template-areas:
-      "file file file"
-      "open fit-width fit-height"
-      "save save-close save-close"
-      "status status status"
-      "stamps stamps stamps"
-      "divider divider divider"
-      "workspace workspace workspace";
-  }
 
-  body > button {
-    width: 100%;
-  }
-}
 
 @media (max-width: 820px) {
   body {
     min-width: 560px;
     overflow: auto;
-
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: auto auto auto auto auto auto 1px minmax(360px, 1fr);
-    grid-template-areas:
-      "file file"
-      "open fit-width"
-      "fit-height save"
-      "save-close save-close"
-      "status status"
-      "stamps stamps"
-      "divider divider"
-      "workspace workspace";
-  }
-
-  #stampChooser {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  #stampThumbnailRow {
-    grid-column: 1 / -1;
-  }
-
-  #stampChooser > button {
-    width: 100%;
   }
 
   #thumbnailPanel {
@@ -968,13 +1000,30 @@ body > hr {
 #fitHeightButton,
 #savePageButton,
 #saveAndCloseButton,
+#saveEncryptedButton,
 #addStampButton,
 #removeStampButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 9px;
+}
 
+#openPdfButton,
+#fitWidthButton,
+#fitHeightButton,
+#savePageButton,
+#addStampButton,
+#removeStampButton {
+  flex: 0 0 54px;
+  width: 54px;
+  height: 54px;
+  min-height: 54px;
+  padding: 7px;
+}
+
+#saveAndCloseButton,
+#saveEncryptedButton {
   min-height: 54px;
   padding: 7px 15px 7px 9px;
 }
@@ -985,7 +1034,8 @@ body > hr {
 #savePageButton::before,
 #saveAndCloseButton::before,
 #addStampButton::before,
-#removeStampButton::before {
+#removeStampButton::before,
+#saveEncryptedButton::before {
   content: "";
   display: block;
   flex: 0 0 40px;
@@ -1008,7 +1058,8 @@ body > hr {
 #savePageButton:hover:not(:disabled)::before,
 #saveAndCloseButton:hover:not(:disabled)::before,
 #addStampButton:hover:not(:disabled)::before,
-#removeStampButton:hover:not(:disabled)::before {
+#removeStampButton:hover:not(:disabled)::before, 
+#saveEncryptedButton:hover:not(:disabled)::before {
   filter:
     drop-shadow(0 5px 7px rgba(0, 0, 0, 0.4))
     drop-shadow(0 0 5px rgba(89, 191, 255, 0.16));
@@ -1021,7 +1072,8 @@ body > hr {
 #savePageButton:active:not(:disabled)::before,
 #saveAndCloseButton:active:not(:disabled)::before,
 #addStampButton:active:not(:disabled)::before,
-#removeStampButton:active:not(:disabled)::before {
+#removeStampButton:active:not(:disabled)::before,
+#saveEncryptedButton:active:not(:disabled)::before {
   transform: translateY(1px) scale(0.97);
 }
 
@@ -1031,7 +1083,8 @@ body > hr {
 #savePageButton:disabled::before,
 #saveAndCloseButton:disabled::before,
 #addStampButton:disabled::before,
-#removeStampButton:disabled::before {
+#removeStampButton:disabled::before,
+#saveEncryptedButton:disabled::before {
   opacity: 0.38;
   filter: grayscale(0.88);
 }
@@ -1042,8 +1095,7 @@ body > hr {
 */
 #openPdfButton::before,
 #savePageButton::before,
-#saveAndCloseButton::before,
-#addStampButton::before {
+#saveAndCloseButton::before {
   background-image: url("./assets/ui/actions-sprite.png");
 }
 
@@ -1059,9 +1111,6 @@ body > hr {
   background-position: -80px 0;
 }
 
-#addStampButton::before {
-  background-position: -80px -40px;
-}
 
 /* View sprite:
    row 1: fit width, fit height, zoom in, zoom out
@@ -1084,64 +1133,22 @@ body > hr {
    row 1: add, remove, confirm, clear
    row 2: lock, unlock, trash, refresh
 */
+#addStampButton::before,
+#saveEncryptedButton::before,
 #removeStampButton::before {
-  background-image: url("./assets/ui/utility-sprite.png");
+  background-image:
+    url("./assets/ui/utility-sprite.png");
+}
+
+#addStampButton::before {
+  background-position: 0 0;
+}
+
+#saveEncryptedButton::before {
+  background-position: 0 -40px;
+}
+
+#removeStampButton::before {
   background-position: -80px -40px;
-}
-
-/* Keep compact layouts readable without removing the accessible text labels. */
-@media (max-width: 1180px) {
-  #openPdfButton,
-  #fitWidthButton,
-  #fitHeightButton,
-  #savePageButton,
-  #saveAndCloseButton,
-  #addStampButton,
-  #removeStampButton {
-    justify-content: flex-start;
-  }
-}
-
-@media (max-width: 680px) {
-  #openPdfButton::before,
-  #fitWidthButton::before,
-  #fitHeightButton::before,
-  #savePageButton::before,
-  #saveAndCloseButton::before,
-  #addStampButton::before,
-  #removeStampButton::before {
-    flex-basis: 36px;
-    width: 36px;
-    height: 36px;
-
-    background-size: 144px 72px;
-  }
-
-  #openPdfButton::before {
-    background-position: 0 0;
-  }
-
-  #savePageButton::before {
-    background-position: -36px 0;
-  }
-
-  #saveAndCloseButton::before,
-  #addStampButton::before,
-  #removeStampButton::before {
-    background-position-x: -72px;
-  }
-
-  #addStampButton::before,
-  #removeStampButton::before {
-    background-position-y: -36px;
-  }
-
-  #fitWidthButton::before {
-    background-position: 0 0;
-  }
-
-  #fitHeightButton::before {
-    background-position: -36px 0;
-  }
 }
 

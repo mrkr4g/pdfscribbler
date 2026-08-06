@@ -76,6 +76,10 @@ const loadingIndicator = document.getElementById('loadingIndicator') as HTMLDivE
 const addStampButton = document.getElementById('addStampButton') as HTMLButtonElement;
 const removeStampButton = document.getElementById('removeStampButton') as HTMLButtonElement;
 const stampThumbnailRow = document.getElementById('stampThumbnailRow') as HTMLDivElement;
+const dynamicTextButtonRow =
+  document.getElementById(
+    'dynamicTextButtonRow'
+  ) as HTMLDivElement;
 const freeTextDialog =
   document.getElementById(
     'freeTextDialog'
@@ -539,25 +543,37 @@ async function saveActivePage(
   const sourceFilePath =
     currentPdfFilePath;
 
-  const activeButton =
+    const activeButton =
     closeAfterSave
       ? saveAndCloseButton
       : savePageButton;
-
+  
   const originalButtonText =
-    activeButton.textContent ??
-    (
-      closeAfterSave
-        ? 'Save and Close'
-        : 'Save Active Page'
+    activeButton.textContent ?? '';
+  
+  const originalButtonTitle =
+    activeButton.title;
+  
+  const originalButtonAriaLabel =
+    activeButton.getAttribute(
+      'aria-label'
     );
 
   savePageButton.disabled = true;
   saveAndCloseButton.disabled = true;
 
-  activeButton.textContent =
-    'Preparing PDF...';
-
+  if (closeAfterSave) {
+    activeButton.textContent =
+      'Preparing PDF...';
+  } else {
+    activeButton.title =
+      'Preparing PDF...';
+  
+    activeButton.setAttribute(
+      'aria-label',
+      'Preparing PDF...'
+    );
+  }
   saveStatus.textContent = '';
 
   let saveStage =
@@ -587,10 +603,23 @@ async function saveActivePage(
         stampCanvas.height
       );
 
-    activeButton.textContent =
+      const savingButtonLabel =
       closeAfterSave
         ? 'Saving...'
         : 'Choose Save Location...';
+    
+    if (closeAfterSave) {
+      activeButton.textContent =
+        savingButtonLabel;
+    } else {
+      activeButton.title =
+        savingButtonLabel;
+    
+      activeButton.setAttribute(
+        'aria-label',
+        savingButtonLabel
+      );
+    }
 
     saveStage =
     closeAfterSave
@@ -1519,6 +1548,7 @@ removeStampButton.addEventListener(
 //render thumbnails of the stamps
 function renderStampThumbnails(): void {
   stampThumbnailRow.replaceChildren();
+  dynamicTextButtonRow.replaceChildren();
 
   const stampImages =
     getStampImages();
@@ -1582,7 +1612,7 @@ function renderStampThumbnails(): void {
       }
     );
 
-    stampThumbnailRow.appendChild(
+    dynamicTextButtonRow.appendChild(
       thumbnail
     );
   }
