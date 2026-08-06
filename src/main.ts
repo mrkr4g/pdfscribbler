@@ -319,7 +319,7 @@ ipcMain.handle(
     const defaultFilePath =
       path.join(
         sourcePath.dir,
-        `${sourcePath.name}-page-${pageNumber}-stamped.pdf`
+        `${sourcePath.name}-page-${pageNumber}-completed.pdf`
       );
 
     const result =
@@ -365,7 +365,7 @@ ipcMain.handle(
     const outputFilePath =
       path.join(
         sourcePath.dir,
-        `${sourcePath.name}-page-${pageNumber}-stamped.pdf`
+        `${sourcePath.name}-page-${pageNumber}-completed.pdf`
       );
 
     await fs.writeFile(

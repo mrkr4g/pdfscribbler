@@ -285,7 +285,7 @@ function createGlyphVariant(
   const horizontalScale =
     randomBetween(
       0.94,
-      1.06
+      1.12
     );
 
   const verticalScale =
@@ -297,8 +297,8 @@ function createGlyphVariant(
   const rotation =
     degreesToRadians(
       randomBetween(
-        -2.5,
-        2.5
+        -2,
+        3.5
       )
     );
 
